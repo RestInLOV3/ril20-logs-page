@@ -90,15 +90,10 @@ const color = scenario.color as string;
   description={(scenario.description as string) ?? ""}
   image={coverUrl}
 >
-  <div class="scenario-header" style={`--c: ${color}`}>
-    {
-      coverUrl && (
-        <div
-          class="scenario-cover"
-          style={`background-image: url('${coverUrl}')`}
-        />
-      )
-    }
+  <div
+    class={`scenario-header${coverUrl ? " has-cover" : ""}`}
+    style={`--c: ${color}${coverUrl ? `; background-image: url('${coverUrl}')` : ""}`}
+  >
     <div class="scenario-meta">
       <h1 class="scenario-title">{scenario.title as string}</h1>
       {
@@ -164,19 +159,38 @@ const color = scenario.color as string;
   .scenario-header {
     position: relative;
     width: 100vw;
-    align-items: center;
     justify-self: center;
     margin-bottom: 3rem;
     overflow: hidden;
     background: var(--surface);
-  }
-  .scenario-cover {
-    height: 200px;
     background-size: cover;
     background-position: center;
   }
+  .scenario-header.has-cover {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .scenario-header.has-cover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 20%, rgba(0, 0, 0, 0.65) 100%);
+    pointer-events: none;
+  }
   .scenario-meta {
-    padding: 8rem 15rem 1.3rem;
+    position: relative;
+    z-index: 1;
+    padding: 1.5rem 15rem 1.5rem;
+  }
+  .has-cover .scenario-title,
+  .has-cover .scenario-desc {
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  }
+  .has-cover .scenario-desc {
+    color: rgba(255, 255, 255, 0.85);
   }
   .breadcrumb {
     font-size: 0.82rem;
