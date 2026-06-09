@@ -186,7 +186,7 @@ const color = scenario.color as string;
   .scenario-meta {
     position: relative;
     z-index: 1;
-    padding: 1.5rem 15rem 1.5rem;
+    padding: 1.5rem clamp(1.5rem, 10vw, 15rem);
   }
   .has-cover .scenario-title,
   .has-cover .scenario-desc {
@@ -238,10 +238,15 @@ const color = scenario.color as string;
   .character-grid {
     list-style: none;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
     justify-content: center;
     gap: 0.75rem;
     padding: 0;
+  }
+  @media (max-width: 600px) {
+    .character-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   .log-list {
