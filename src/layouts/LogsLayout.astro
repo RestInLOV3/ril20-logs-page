@@ -2,8 +2,9 @@
 interface Props {
   title?: string;
   description?: string;
+  image?: string | null;
 }
-const { title = "ril20 logs", description = "RIL20 로그 아카이브" } =
+const { title = "ril20 logs", description = "RIL20 로그 아카이브", image } =
   Astro.props;
 ---
 
@@ -13,6 +14,11 @@ const { title = "ril20 logs", description = "RIL20 로그 아카이브" } =
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {image && <meta property="og:image" content={image} />}
+    <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
+    {image && <meta name="twitter:image" content={image} />}
     <title>{title}</title>
     <link
       rel="stylesheet"
