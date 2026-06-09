@@ -79,7 +79,7 @@ function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/ping', {
+      const res = await fetch('/logs/api/admin/ping', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) { setError('토큰이 유효하지 않습니다.'); return; }
@@ -161,7 +161,7 @@ function ScenarioForm({
         const form = new FormData();
         form.append('key', key);
         form.append('file', coverFile);
-        const upRes = await fetch('/api/admin/upload', {
+        const upRes = await fetch('/logs/api/admin/upload', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: form,
@@ -176,12 +176,12 @@ function ScenarioForm({
         color, rule: rule || null, scenario_type: scenarioType || null,
       };
       const res = isEdit
-        ? await fetch(`/api/admin/scenarios/${initial!.id}`, {
+        ? await fetch(`/logs/api/admin/scenarios/${initial!.id}`, {
             method: 'PUT',
             headers: apiHeaders(token),
             body: JSON.stringify(body),
           })
-        : await fetch('/api/admin/scenarios', {
+        : await fetch('/logs/api/admin/scenarios', {
             method: 'POST',
             headers: apiHeaders(token),
             body: JSON.stringify(body),
@@ -365,7 +365,7 @@ function CharacterForm({ token, scenarioId, scenarioSlug, initial, onSaved, onCa
         const form = new FormData();
         form.append('key', key);
         form.append('file', imageFile);
-        const upRes = await fetch('/api/admin/upload', {
+        const upRes = await fetch('/logs/api/admin/upload', {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: form,
@@ -382,10 +382,10 @@ function CharacterForm({ token, scenarioId, scenarioSlug, initial, onSaved, onCa
       };
 
       const res = isEdit
-        ? await fetch(`/api/admin/characters/${initial!.id}`, {
+        ? await fetch(`/logs/api/admin/characters/${initial!.id}`, {
             method: 'PUT', headers: apiHeaders(token), body: JSON.stringify(payload),
           })
-        : await fetch(`/api/admin/scenarios/${scenarioId}/characters`, {
+        : await fetch(`/logs/api/admin/scenarios/${scenarioId}/characters`, {
             method: 'POST', headers: apiHeaders(token), body: JSON.stringify(payload),
           });
       if (!res.ok) throw new Error(await extractError(res));
@@ -466,12 +466,12 @@ function ScenarioDetail({ token, scenario, onBack }: {
   const [editScenario, setEditScenario] = useState(false);
 
   const fetchAll = async () => {
-    const detail = await fetch(`/api/scenarios/${scenario.slug}`).then((r) => r.json() as Promise<{
+    const detail = await fetch(`/logs/api/scenarios/${scenario.slug}`).then((r) => r.json() as Promise<{
       logs: Log[]; characters: Character[];
     }>);
     setLogs(detail.logs ?? []);
     setChars(detail.characters ?? []);
-    const rv = await fetch(`/api/scenarios/${scenario.slug}/reviews`).then((r) => r.json() as Promise<Review[]>);
+    const rv = await fetch(`/logs/api/scenarios/${scenario.slug}/reviews`).then((r) => r.json() as Promise<Review[]>);
     setReviews(rv);
   };
 
@@ -479,19 +479,19 @@ function ScenarioDetail({ token, scenario, onBack }: {
 
   const deleteLog = async (id: number) => {
     if (!confirm('이 로그를 삭제하시겠습니까?')) return;
-    await fetch(`/api/admin/logs/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`/logs/api/admin/logs/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     void fetchAll();
   };
 
   const deleteChar = async (id: number) => {
     if (!confirm('이 캐릭터를 삭제하시겠습니까?')) return;
-    await fetch(`/api/admin/characters/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`/logs/api/admin/characters/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     void fetchAll();
   };
 
   const deleteReview = async (id: number) => {
     if (!confirm('이 후기를 삭제하시겠습니까?')) return;
-    await fetch(`/api/admin/reviews/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`/logs/api/admin/reviews/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     void fetchAll();
   };
 
@@ -608,7 +608,7 @@ export default function AdminApp() {
   const [showCreate, setShowCreate] = useState(false);
 
   const fetchScenarios = async () => {
-    const data = await fetch('/api/scenarios').then((r) => r.json() as Promise<Scenario[]>);
+    const data = await fetch('/logs/api/scenarios').then((r) => r.json() as Promise<Scenario[]>);
     setScenarios(data);
   };
 
@@ -623,7 +623,7 @@ export default function AdminApp() {
 
   const deleteScenario = async (id: number) => {
     if (!confirm('시나리오와 모든 관련 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-    await fetch(`/api/admin/scenarios/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    await fetch(`/logs/api/admin/scenarios/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
     void fetchScenarios();
   };
 

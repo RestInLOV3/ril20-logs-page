@@ -7,7 +7,7 @@ function requireAdmin(env: Env, authHeader: string | undefined): boolean {
   return authHeader.replace('Bearer ', '') === env.ADMIN_TOKEN;
 }
 
-const app = new Hono<{ Bindings: Env }>().basePath('/api');
+const app = new Hono<{ Bindings: Env }>().basePath('/logs/api');
 
 // ── 공개 API ──────────────────────────────────────────
 

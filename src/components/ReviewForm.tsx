@@ -18,7 +18,7 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
 
     setStatus('loading');
     try {
-      const res = await fetch(`/api/scenarios/${scenarioSlug}/reviews`, {
+      const res = await fetch(`/logs/api/scenarios/${scenarioSlug}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
