@@ -58,6 +58,15 @@ function apiHeaders(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+async function extractError(res: Response): Promise<string> {
+  try {
+    const data = (await res.json()) as { message?: string };
+    return data.message ?? '오류가 발생했습니다.';
+  } catch {
+    return '오류가 발생했습니다.';
+  }
+}
+
 // ── 인증 화면 ─────────────────────────────────────────
 
 function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
@@ -177,7 +186,7 @@ function ScenarioForm({
             headers: apiHeaders(token),
             body: JSON.stringify(body),
           });
-      if (!res.ok) throw new Error(((await res.json()) as { message: string }).message);
+      if (!res.ok) throw new Error(await extractError(res));
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
@@ -276,7 +285,7 @@ function LogForm({ token, scenarioId, initial, onSaved, onCancel }: {
         headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
-      if (!res.ok) throw new Error(((await res.json()) as { message: string }).message);
+      if (!res.ok) throw new Error(await extractError(res));
       if (!isEdit) { setTitle(''); setOrderNum(''); setFile(null); }
       onSaved();
     } catch (err) {
@@ -379,7 +388,7 @@ function CharacterForm({ token, scenarioId, scenarioSlug, initial, onSaved, onCa
         : await fetch(`/api/admin/scenarios/${scenarioId}/characters`, {
             method: 'POST', headers: apiHeaders(token), body: JSON.stringify(payload),
           });
-      if (!res.ok) throw new Error(((await res.json()) as { message: string }).message);
+      if (!res.ok) throw new Error(await extractError(res));
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
