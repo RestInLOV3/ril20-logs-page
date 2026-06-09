@@ -32,6 +32,7 @@ interface Character {
   id: number;
   name: string;
   pl_name: string;
+  image_r2: string | null;
   image_url: string | null;
   bio: string | null;
   sort_order: number;
@@ -243,34 +244,40 @@ function ScenarioForm({
   );
 }
 
-// ── 로그 업로드 폼 ────────────────────────────────────
+// ── 로그 폼 (신규 업로드 + 수정 통합) ────────────────
 
-function LogUploadForm({ token, scenarioId, onSaved }: {
-  token: string; scenarioId: number; onSaved: () => void;
+function LogForm({ token, scenarioId, initial, onSaved, onCancel }: {
+  token: string; scenarioId: number; initial?: Log;
+  onSaved: () => void; onCancel?: () => void;
 }) {
-  const [title, setTitle] = useState('');
-  const [orderNum, setOrderNum] = useState('');
+  const isEdit = !!initial?.id;
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [orderNum, setOrderNum] = useState(String(initial?.order_num ?? ''));
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
+    if (!isEdit && !file) return;
     setLoading(true);
     setError('');
     try {
       const form = new FormData();
       form.append('title', title);
       form.append('order_num', orderNum);
-      form.append('file', file);
-      const res = await fetch(`/api/admin/scenarios/${scenarioId}/logs`, {
-        method: 'POST',
+      if (file) form.append('file', file);
+
+      const url = isEdit
+        ? `/api/admin/logs/${initial!.id}`
+        : `/api/admin/scenarios/${scenarioId}/logs`;
+      const res = await fetch(url, {
+        method: isEdit ? 'PUT' : 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
       if (!res.ok) throw new Error(((await res.json()) as { message: string }).message);
-      setTitle(''); setOrderNum(''); setFile(null);
+      if (!isEdit) { setTitle(''); setOrderNum(''); setFile(null); }
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
@@ -292,44 +299,60 @@ function LogUploadForm({ token, scenarioId, onSaved }: {
             className="form-input" min={1} required />
         </label>
         <label className="form-label">
-          HTML 파일
+          HTML 파일{isEdit && ' (변경 시에만 선택)'}
           <input type="file" accept=".html,.htm"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="form-input" required />
+            className="form-input" required={!isEdit} />
         </label>
       </div>
       {error && <p className="form-error">{error}</p>}
-      <button type="submit" className="btn-primary" disabled={loading || !file}>
-        {loading ? '업로드 중…' : '로그 업로드'}
-      </button>
+      <div className="btn-row">
+        {onCancel && <button type="button" onClick={onCancel} className="btn-secondary">취소</button>}
+        <button type="submit" className="btn-primary" disabled={loading || (!isEdit && !file)}>
+          {loading ? (isEdit ? '저장 중…' : '업로드 중…') : (isEdit ? '저장' : '로그 업로드')}
+        </button>
+      </div>
     </form>
   );
 }
 
-// ── 캐릭터 폼 ─────────────────────────────────────────
+// ── 캐릭터 폼 (신규 추가 + 수정 통합) ───────────────
 
-function CharacterForm({ token, scenarioId, onSaved, onCancel }: {
-  token: string; scenarioId: number; onSaved: () => void; onCancel: () => void;
+function CharacterForm({ token, scenarioId, scenarioSlug, initial, onSaved, onCancel }: {
+  token: string; scenarioId: number; scenarioSlug: string;
+  initial?: Character; onSaved: () => void; onCancel: () => void;
 }) {
-  const [name, setName] = useState('');
-  const [plName, setPlName] = useState('');
-  const [bio, setBio] = useState('');
-  const [sortOrder, setSortOrder] = useState('0');
-  const [quotes, setQuotes] = useState<string[]>(['']);
+  const isEdit = !!initial?.id;
+  const [name, setName] = useState(initial?.name ?? '');
+  const [plName, setPlName] = useState(initial?.pl_name ?? '');
+  const [bio, setBio] = useState(initial?.bio ?? '');
+  const [sortOrder, setSortOrder] = useState(String(initial?.sort_order ?? '0'));
+  const [quotes, setQuotes] = useState<string[]>(
+    initial?.quotes?.length ? initial.quotes.map((q) => q.quote) : [''],
+  );
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageR2, setImageR2] = useState<string | null>(initial?.image_r2 ?? null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initial?.image_url ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setImageFile(f);
+    if (f) setImagePreview(URL.createObjectURL(f));
+  };
+
+  const clearImage = () => { setImageFile(null); setImageR2(null); setImagePreview(null); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      let image_r2: string | null = null;
+      let finalImageR2 = imageR2;
 
       if (imageFile) {
-        const slug = window.location.pathname.split('/')[3] ?? 'unknown';
-        const key = `scenarios/${slug}/characters/${Date.now()}.${imageFile.name.split('.').pop()}`;
+        const key = `scenarios/${scenarioSlug}/characters/${Date.now()}.${imageFile.name.split('.').pop()}`;
         const form = new FormData();
         form.append('key', key);
         form.append('file', imageFile);
@@ -339,19 +362,23 @@ function CharacterForm({ token, scenarioId, onSaved, onCancel }: {
           body: form,
         });
         if (!upRes.ok) throw new Error('이미지 업로드에 실패했습니다.');
-        image_r2 = key;
+        finalImageR2 = key;
       }
 
-      const res = await fetch(`/api/admin/scenarios/${scenarioId}/characters`, {
-        method: 'POST',
-        headers: apiHeaders(token),
-        body: JSON.stringify({
-          name, pl_name: plName, bio: bio || null,
-          sort_order: parseInt(sortOrder),
-          image_r2,
-          quotes: quotes.filter((q) => q.trim()),
-        }),
-      });
+      const payload = {
+        name, pl_name: plName, bio: bio || null,
+        sort_order: parseInt(sortOrder),
+        image_r2: finalImageR2,
+        quotes: quotes.filter((q) => q.trim()),
+      };
+
+      const res = isEdit
+        ? await fetch(`/api/admin/characters/${initial!.id}`, {
+            method: 'PUT', headers: apiHeaders(token), body: JSON.stringify(payload),
+          })
+        : await fetch(`/api/admin/scenarios/${scenarioId}/characters`, {
+            method: 'POST', headers: apiHeaders(token), body: JSON.stringify(payload),
+          });
       if (!res.ok) throw new Error(((await res.json()) as { message: string }).message);
       onSaved();
     } catch (err) {
@@ -377,10 +404,16 @@ function CharacterForm({ token, scenarioId, onSaved, onCancel }: {
           <input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}
             className="form-input" min={0} />
         </label>
-        <label className="form-label">캐릭터 이미지
-          <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-            className="form-input" />
-        </label>
+        <div className="form-label">
+          캐릭터 이미지
+          {imagePreview && (
+            <div className="cover-preview-wrap">
+              <img src={imagePreview} alt="캐릭터 이미지 미리보기" className="cover-preview" />
+              <button type="button" onClick={clearImage} className="cover-remove-btn">이미지 제거</button>
+            </div>
+          )}
+          <input type="file" accept="image/*" onChange={handleImageChange} className="form-input" />
+        </div>
         <div className="form-label">
           대사 목록 (팝업에서 랜덤 표시)
           {quotes.map((q, i) => (
@@ -403,7 +436,7 @@ function CharacterForm({ token, scenarioId, onSaved, onCancel }: {
       <div className="btn-row">
         <button type="button" onClick={onCancel} className="btn-secondary">취소</button>
         <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? '저장 중…' : '캐릭터 추가'}
+          {loading ? '저장 중…' : (isEdit ? '저장' : '캐릭터 추가')}
         </button>
       </div>
     </form>
@@ -419,6 +452,8 @@ function ScenarioDetail({ token, scenario, onBack }: {
   const [chars, setChars] = useState<Character[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [showCharForm, setShowCharForm] = useState(false);
+  const [editChar, setEditChar] = useState<Character | null>(null);
+  const [editLog, setEditLog] = useState<Log | null>(null);
   const [editScenario, setEditScenario] = useState(false);
 
   const fetchAll = async () => {
@@ -476,11 +511,25 @@ function ScenarioDetail({ token, scenario, onBack }: {
           {logs.map((log) => (
             <li key={log.id} className="admin-list-item">
               <span>#{log.order_num} {log.title}</span>
-              <button onClick={() => deleteLog(log.id)} className="btn-danger btn-sm">삭제</button>
+              <div className="btn-row">
+                <button onClick={() => { setEditLog(log); }} className="btn-secondary btn-sm">수정</button>
+                <button onClick={() => deleteLog(log.id)} className="btn-danger btn-sm">삭제</button>
+              </div>
             </li>
           ))}
         </ul>
-        <LogUploadForm token={token} scenarioId={scenario.id} onSaved={fetchAll} />
+        {editLog && (
+          <LogForm
+            token={token}
+            scenarioId={scenario.id}
+            initial={editLog}
+            onSaved={() => { setEditLog(null); void fetchAll(); }}
+            onCancel={() => setEditLog(null)}
+          />
+        )}
+        {!editLog && (
+          <LogForm token={token} scenarioId={scenario.id} onSaved={fetchAll} />
+        )}
       </section>
 
       {/* 캐릭터 */}
@@ -490,17 +539,32 @@ function ScenarioDetail({ token, scenario, onBack }: {
           {chars.map((ch) => (
             <li key={ch.id} className="admin-list-item">
               <span>{ch.name} (PL: {ch.pl_name})</span>
-              <button onClick={() => deleteChar(ch.id)} className="btn-danger btn-sm">삭제</button>
+              <div className="btn-row">
+                <button onClick={() => { setEditChar(ch); setShowCharForm(false); }}
+                  className="btn-secondary btn-sm">수정</button>
+                <button onClick={() => deleteChar(ch.id)} className="btn-danger btn-sm">삭제</button>
+              </div>
             </li>
           ))}
         </ul>
-        {!showCharForm && (
-          <button onClick={() => setShowCharForm(true)} className="btn-secondary">+ 캐릭터 추가</button>
-        )}
-        {showCharForm && (
+        {editChar && (
           <CharacterForm
             token={token}
             scenarioId={scenario.id}
+            scenarioSlug={scenario.slug}
+            initial={editChar}
+            onSaved={() => { setEditChar(null); void fetchAll(); }}
+            onCancel={() => setEditChar(null)}
+          />
+        )}
+        {!editChar && !showCharForm && (
+          <button onClick={() => setShowCharForm(true)} className="btn-secondary">+ 캐릭터 추가</button>
+        )}
+        {!editChar && showCharForm && (
+          <CharacterForm
+            token={token}
+            scenarioId={scenario.id}
+            scenarioSlug={scenario.slug}
             onSaved={() => { setShowCharForm(false); void fetchAll(); }}
             onCancel={() => setShowCharForm(false)}
           />

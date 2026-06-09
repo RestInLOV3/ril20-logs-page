@@ -369,6 +369,35 @@ app.post('/admin/scenarios/:id/logs', async (c) => {
   return c.json({ id: logId, title, order_num: orderNum, html_r2: r2Key }, 201);
 });
 
+app.put('/admin/logs/:id', async (c) => {
+  if (!requireAdmin(c.env, c.req.header('Authorization'))) {
+    return c.json({ error: 'unauthorized', message: '인증이 필요합니다.' }, 401);
+  }
+
+  const id = parseInt(c.req.param('id'));
+  const log = await c.env.DB.prepare('SELECT html_r2 FROM logs WHERE id = ?')
+    .bind(id).first<{ html_r2: string }>();
+  if (!log) return c.json({ error: 'not_found', message: '로그를 찾을 수 없습니다.' }, 404);
+
+  const form = await c.req.formData();
+  const title = (form.get('title') as string | null) || null;
+  const orderNumStr = form.get('order_num') as string | null;
+  const file = form.get('file') as File | null;
+
+  if (file) {
+    await uploadToR2(c.env.BUCKET, log.html_r2, await file.arrayBuffer(), 'text/html; charset=utf-8');
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE logs SET
+      title = COALESCE(?, title),
+      order_num = COALESCE(?, order_num)
+    WHERE id = ?
+  `).bind(title, orderNumStr ? parseInt(orderNumStr) : null, id).run();
+
+  return c.json({ ok: true });
+});
+
 app.delete('/admin/logs/:id', async (c) => {
   if (!requireAdmin(c.env, c.req.header('Authorization'))) {
     return c.json({ error: 'unauthorized', message: '인증이 필요합니다.' }, 401);
