@@ -110,6 +110,7 @@ export default function CharacterPopup({ character, accentColor }: Props) {
           border-radius: 6px;
           padding: 0.75rem;
           display: flex;
+          justify-content: space-around;
           align-items: center;
           gap: 0.75rem;
           cursor: pointer;
@@ -132,6 +133,9 @@ export default function CharacterPopup({ character, accentColor }: Props) {
           height: 100%;
           object-fit: cover;
           background: var(--border, #e2e2de);
+        }
+        .char-info {
+          margin-right: 1.25rem;
         }
         .char-name { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.1rem; }
         .char-pl { font-size: 0.73rem; color: var(--muted, #8a8a86); }

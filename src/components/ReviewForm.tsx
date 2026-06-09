@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 interface Props {
   readonly scenarioSlug: string;
@@ -6,21 +6,23 @@ interface Props {
 }
 
 export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
-  const [plName, setPlName] = useState('');
+  const [plName, setPlName] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [content, setContent] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [content, setContent] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
+    "idle",
+  );
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!content.trim()) return;
 
-    setStatus('loading');
+    setStatus("loading");
     try {
       const res = await fetch(`/logs/api/scenarios/${scenarioSlug}/reviews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pl_name: isAnonymous ? null : plName.trim() || null,
           content: content.trim(),
@@ -29,20 +31,23 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
 
       if (!res.ok) {
         const data: { message: string } = await res.json();
-        throw new Error(data.message ?? '오류가 발생했습니다.');
+        throw new Error(data.message ?? "오류가 발생했습니다.");
       }
 
-      setStatus('done');
-      setContent('');
-      setPlName('');
+      setStatus("done");
+      setContent("");
+      setPlName("");
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : '오류가 발생했습니다.');
-      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : "오류가 발생했습니다.");
+      setStatus("error");
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ '--c': accentColor } as React.CSSProperties}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ "--c": accentColor } as React.CSSProperties}
+    >
       <h3 className="form-title">후기 작성</h3>
 
       <div className="form-row">
@@ -52,8 +57,8 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
             type="text"
             value={plName}
             onChange={(e) => setPlName(e.target.value)}
-            disabled={isAnonymous || status === 'loading'}
-            placeholder={isAnonymous ? '익명' : 'PL 이름 (선택)'}
+            disabled={isAnonymous || status === "loading"}
+            placeholder={isAnonymous ? "익명" : "닉네임"}
             maxLength={30}
             className="form-input"
           />
@@ -63,7 +68,7 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
             type="checkbox"
             checked={isAnonymous}
             onChange={(e) => setIsAnonymous(e.target.checked)}
-            disabled={status === 'loading'}
+            disabled={status === "loading"}
           />
           {" 익명으로 작성"}
         </label>
@@ -75,7 +80,7 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            disabled={status === 'loading'}
+            disabled={status === "loading"}
             placeholder="후기를 작성해주세요 (최대 1000자)"
             maxLength={1000}
             rows={4}
@@ -86,28 +91,24 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
         <div className="char-count">{content.length} / 1000</div>
       </div>
 
-      {status === 'error' && (
-        <p className="form-error">{errorMsg}</p>
-      )}
-      {status === 'done' && (
+      {status === "error" && <p className="form-error">{errorMsg}</p>}
+      {status === "done" && (
         <p className="form-success">후기가 등록되었습니다. 감사합니다!</p>
       )}
 
       <button
         type="submit"
-        disabled={status === 'loading' || !content.trim()}
+        disabled={status === "loading" || !content.trim()}
         className="form-submit"
       >
-        {status === 'loading' ? '등록 중…' : '후기 등록'}
+        {status === "loading" ? "등록 중…" : "후기 등록"}
       </button>
 
       <style>{`
         form[style] {
-          margin-top: 2rem;
           padding: 1.5rem;
           background: var(--surface, #fff);
           border: 1px solid var(--border, #e2e2de);
-          border-top: 2px solid var(--c);
           border-radius: 6px;
           font-family: inherit;
         }
