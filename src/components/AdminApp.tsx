@@ -278,8 +278,8 @@ function LogForm({ token, scenarioId, initial, onSaved, onCancel }: {
       if (file) form.append('file', file);
 
       const url = isEdit
-        ? `/api/admin/logs/${initial!.id}`
-        : `/api/admin/scenarios/${scenarioId}/logs`;
+        ? `/logs/api/admin/logs/${initial!.id}`
+        : `/logs/api/admin/scenarios/${scenarioId}/logs`;
       const res = await fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
         headers: { Authorization: `Bearer ${token}` },
