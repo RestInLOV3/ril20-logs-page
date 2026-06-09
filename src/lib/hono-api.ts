@@ -210,7 +210,9 @@ app.put('/admin/scenarios/:id', async (c) => {
     rule?: string | null; scenario_type?: string | null;
   }>();
 
-  await c.env.DB.prepare(`
+  console.log('[PUT scenarios] id:', id, 'rule:', body.rule, 'scenario_type:', body.scenario_type);
+
+  const runResult = await c.env.DB.prepare(`
     UPDATE scenarios SET
       slug = COALESCE(?, slug),
       title = COALESCE(?, title),
@@ -228,7 +230,12 @@ app.put('/admin/scenarios/:id', async (c) => {
     id,
   ).run();
 
-  return c.json({ ok: true });
+  if (!runResult.success) {
+    return c.json({ error: 'db_error', message: (runResult as unknown as { error?: string }).error ?? 'DB update failed' }, 500);
+  }
+
+  const updated = await c.env.DB.prepare('SELECT * FROM scenarios WHERE id = ?').bind(id).first<Record<string, unknown>>();
+  return c.json({ ...updated, cover_url: r2KeyToUrl(updated?.cover_r2 as string | null, c.env.R2_PUBLIC_URL) });
 });
 
 app.delete('/admin/scenarios/:id', async (c) => {

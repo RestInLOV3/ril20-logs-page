@@ -119,7 +119,7 @@ function ScenarioForm({
 }: {
   token: string;
   initial?: Partial<Scenario>;
-  onSaved: () => void;
+  onSaved: (updated?: Scenario) => void;
   onCancel: () => void;
 }) {
   const [slug, setSlug] = useState(initial?.slug ?? '');
@@ -187,7 +187,8 @@ function ScenarioForm({
             body: JSON.stringify(body),
           });
       if (!res.ok) throw new Error(await extractError(res));
-      onSaved();
+      const updated = (await res.json()) as Scenario;
+      onSaved(updated);
     } catch (err) {
       setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
     } finally {
@@ -454,9 +455,10 @@ function CharacterForm({ token, scenarioId, scenarioSlug, initial, onSaved, onCa
 
 // ── 시나리오 상세 패널 ────────────────────────────────
 
-function ScenarioDetail({ token, scenario, onBack }: {
+function ScenarioDetail({ token, scenario: scenarioProp, onBack }: {
   token: string; scenario: Scenario; onBack: () => void;
 }) {
+  const [scenario, setScenario] = useState<Scenario>(scenarioProp);
   const [logs, setLogs] = useState<Log[]>([]);
   const [chars, setChars] = useState<Character[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -508,7 +510,10 @@ function ScenarioDetail({ token, scenario, onBack }: {
         <ScenarioForm
           token={token}
           initial={scenario}
-          onSaved={() => { setEditScenario(false); onBack(); }}
+          onSaved={(updated) => {
+            if (updated) setScenario(updated);
+            setEditScenario(false);
+          }}
           onCancel={() => setEditScenario(false)}
         />
       )}

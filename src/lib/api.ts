@@ -196,6 +196,7 @@ app.put('/admin/scenarios/:id', async (c) => {
   const body = await c.req.json<{
     slug?: string; title?: string; color?: string;
     description?: string | null; cover_r2?: string | null;
+    rule?: string | null; scenario_type?: string | null;
   }>();
 
   await c.env.DB.prepare(`
@@ -204,15 +205,20 @@ app.put('/admin/scenarios/:id', async (c) => {
       title = COALESCE(?, title),
       description = ?,
       color = COALESCE(?, color),
-      cover_r2 = ?
+      cover_r2 = ?,
+      rule = ?,
+      scenario_type = ?
     WHERE id = ?
   `).bind(
     body.slug ?? null, body.title ?? null,
     body.description ?? null, body.color ?? null,
-    body.cover_r2 ?? null, id,
+    body.cover_r2 ?? null,
+    body.rule ?? null, body.scenario_type ?? null,
+    id,
   ).run();
 
-  return c.json({ ok: true });
+  const updated = await c.env.DB.prepare('SELECT * FROM scenarios WHERE id = ?').bind(id).first<Record<string, unknown>>();
+  return c.json({ ...updated, cover_url: r2KeyToUrl(updated?.cover_r2 as string | null, c.env.R2_PUBLIC_URL) });
 });
 
 app.delete('/admin/scenarios/:id', async (c) => {

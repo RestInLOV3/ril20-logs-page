@@ -176,7 +176,11 @@ const color = scenario.color as string;
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, transparent 20%, rgba(0, 0, 0, 0.65) 100%);
+    background: linear-gradient(
+      to bottom,
+      transparent 20%,
+      rgba(0, 0, 0, 0.65) 100%
+    );
     pointer-events: none;
   }
   .scenario-meta {
@@ -241,16 +245,18 @@ const color = scenario.color as string;
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    padding: 0;
   }
   .log-item a {
     display: flex;
     align-items: center;
     gap: 1rem;
     padding: 0.75rem 1rem;
+    text-decoration: none;
+    color: var(--text);
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 5px;
-    border-left: 3px solid var(--c);
     transition:
       background 0.15s,
       box-shadow 0.15s;
