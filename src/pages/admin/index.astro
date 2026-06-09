@@ -1,0 +1,407 @@
+---
+import AdminApp from "../../components/AdminApp";
+---
+
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ril20 logs — 관리자</title>
+    <link
+      rel="stylesheet"
+      as="style"
+      crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #f6f6f4;
+        --surface: #ffffff;
+        --border: #e2e2de;
+        --text: #1c1c1a;
+        --muted: #8a8a86;
+        --accent: #5a7fa8;
+        font-family: "Pretendard Variable", Pretendard, sans-serif;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      .wrap {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem;
+      }
+
+      :global(.login-wrap) {
+        max-width: 360px;
+        margin: 6rem auto;
+      }
+      :global(.login-title) {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 1.5rem;
+      }
+      :global(.login-form) {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      :global(.login-input) {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 0.65rem 1rem;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 0.92rem;
+        outline: none;
+      }
+      :global(.login-input:focus) {
+        border-color: var(--accent);
+      }
+
+      :global(.admin-header) {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+      :global(.admin-title) {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      :global(.panel) {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      :global(.panel-title),
+      :global(.section-h3) {
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 1.25rem;
+      }
+      :global(.sub-form) {
+        border: 1px dashed var(--border);
+        border-radius: 4px;
+        padding: 1rem;
+        margin-top: 0.75rem;
+      }
+      :global(.form-grid) {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+        margin-bottom: 1rem;
+      }
+      :global(.form-label) {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+      :global(.form-input),
+      :global(.form-textarea) {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        padding: 0.5rem 0.75rem;
+        font-family: inherit;
+        font-size: 0.88rem;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      :global(.form-input:focus),
+      :global(.form-textarea:focus) {
+        border-color: var(--accent);
+      }
+      :global(.form-textarea) {
+        resize: vertical;
+        min-height: 80px;
+      }
+      :global(.color-row) {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      :global(.color-input) {
+        width: 40px;
+        height: 32px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        padding: 0;
+      }
+      :global(.color-hex) {
+        font-size: 0.83rem;
+        font-family: monospace;
+        color: var(--text);
+      }
+
+      :global(.quote-row) {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      :global(.btn-add) {
+        background: none;
+        border: 1px dashed var(--border);
+        border-radius: 4px;
+        color: var(--muted);
+        padding: 0.3rem 0.75rem;
+        font-family: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+        margin-top: 0.4rem;
+      }
+      :global(.btn-add:hover) {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      :global(.btn-remove) {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--muted);
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        flex-shrink: 0;
+      }
+
+      :global(.btn-row) {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+      }
+      :global(.btn-primary) {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 0.55rem 1.25rem;
+        font-family: inherit;
+        font-size: 0.88rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: opacity 0.15s;
+      }
+      :global(.btn-primary:hover:not(:disabled)) {
+        opacity: 0.85;
+      }
+      :global(.btn-primary:disabled) {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      :global(.btn-secondary) {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 4px;
+        padding: 0.55rem 1.25rem;
+        font-family: inherit;
+        font-size: 0.88rem;
+        cursor: pointer;
+      }
+      :global(.btn-secondary:hover) {
+        border-color: var(--accent);
+      }
+      :global(.btn-danger) {
+        background: none;
+        border: 1px solid #c0392b;
+        color: #c0392b;
+        border-radius: 4px;
+        padding: 0.3rem 0.75rem;
+        font-family: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+      }
+      :global(.btn-danger:hover) {
+        background: #c0392b;
+        color: #fff;
+      }
+      :global(.btn-sm) {
+        padding: 0.3rem 0.75rem;
+        font-size: 0.78rem;
+      }
+      :global(.btn-back) {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 0.83rem;
+        cursor: pointer;
+        margin-bottom: 1.5rem;
+        padding: 0;
+      }
+      :global(.btn-back:hover) {
+        color: var(--text);
+      }
+
+      :global(.form-error) {
+        font-size: 0.83rem;
+        color: #c0392b;
+        margin-bottom: 0.75rem;
+      }
+      :global(.form-success) {
+        font-size: 0.83rem;
+        color: #27ae60;
+        margin-bottom: 0.75rem;
+      }
+
+      :global(.admin-scenario-list) {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      :global(.admin-scenario-item) {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--c, var(--accent));
+        border-radius: 5px;
+        padding: 0.75rem 1rem;
+      }
+      :global(.scenario-btn) {
+        background: none;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        color: var(--text);
+        font-family: inherit;
+        flex: 1;
+      }
+      :global(.scenario-color-dot) {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--c, var(--accent));
+        flex-shrink: 0;
+      }
+      :global(.scenario-info) {
+        display: flex;
+        flex-direction: column;
+        text-align: left;
+      }
+      :global(.scenario-title) {
+        font-size: 0.92rem;
+      }
+      :global(.scenario-meta) {
+        font-size: 0.73rem;
+        color: var(--muted);
+      }
+
+      :global(.scenario-header) {
+        display: flex;
+        align-items: baseline;
+        gap: 1rem;
+        border-left: 4px solid;
+        padding-left: 1rem;
+        margin-bottom: 2rem;
+      }
+      :global(.scenario-h2) {
+        font-size: 1.3rem;
+        font-weight: 600;
+      }
+      :global(.scenario-slug) {
+        font-size: 0.78rem;
+        color: var(--muted);
+        flex: 1;
+      }
+
+      :global(.admin-section) {
+        margin-bottom: 2.5rem;
+      }
+      :global(.admin-list) {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-bottom: 0.75rem;
+      }
+      :global(.admin-list-item) {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.6rem 0.9rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 0.88rem;
+      }
+      :global(.admin-review-item) {
+        align-items: flex-start;
+      }
+      :global(.review-name) {
+        font-size: 0.78rem;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 0.2rem;
+      }
+      :global(.review-text) {
+        font-size: 0.85rem;
+      }
+
+      :global(.cover-preview-wrap) {
+        position: relative;
+        display: inline-flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-bottom: 0.4rem;
+      }
+      :global(.cover-preview) {
+        max-width: 240px;
+        max-height: 140px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        display: block;
+      }
+      :global(.cover-remove-btn) {
+        background: none;
+        border: 1px solid #c0392b;
+        color: #c0392b;
+        border-radius: 4px;
+        padding: 0.25rem 0.6rem;
+        font-family: inherit;
+        font-size: 0.75rem;
+        cursor: pointer;
+        align-self: flex-start;
+      }
+      :global(.cover-remove-btn:hover) {
+        background: #c0392b;
+        color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <AdminApp client:load />
+    </div>
+  </body>
+</html>

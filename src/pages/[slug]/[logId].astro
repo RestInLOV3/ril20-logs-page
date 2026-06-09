@@ -1,0 +1,181 @@
+---
+import LogsLayout from "../../layouts/LogsLayout.astro";
+import { bindings } from "../../lib/bindings";
+import { getFromR2 } from "../../lib/r2";
+
+const { slug, logId } = Astro.params as { slug: string; logId: string };
+const { DB, BUCKET } = bindings;
+
+const scenario = await DB.prepare("SELECT * FROM scenarios WHERE slug = ?")
+  .bind(slug)
+  .first<Record<string, unknown>>();
+
+if (!scenario) return Astro.redirect("/logs");
+
+const log = await DB.prepare(
+  "SELECT * FROM logs WHERE id = ? AND scenario_id = ?",
+)
+  .bind(parseInt(logId), scenario.id)
+  .first<Record<string, unknown>>();
+
+if (!log) return Astro.redirect(`/logs/${slug}`);
+
+const html = await getFromR2(BUCKET, log.html_r2 as string);
+if (!html) return Astro.redirect(`/logs/${slug}`);
+
+const prev = await DB.prepare(
+  "SELECT id, title, order_num FROM logs WHERE scenario_id = ? AND order_num < ? ORDER BY order_num DESC LIMIT 1",
+)
+  .bind(scenario.id, log.order_num)
+  .first<{ id: number; title: string; order_num: number }>();
+
+const next = await DB.prepare(
+  "SELECT id, title, order_num FROM logs WHERE scenario_id = ? AND order_num > ? ORDER BY order_num ASC LIMIT 1",
+)
+  .bind(scenario.id, log.order_num)
+  .first<{ id: number; title: string; order_num: number }>();
+
+const color = scenario.color as string;
+---
+
+<LogsLayout title={`${log.title as string} — ${scenario.title as string}`}>
+  <div class="log-header" style={`--c: ${color}`}>
+    <p class="breadcrumb">
+      <a href="/logs">목록</a>
+      <span>›</span>
+      <a href={`/logs/${slug}`}>{scenario.title as string}</a>
+    </p>
+    <h1 class="log-title">{log.title as string}</h1>
+    <p class="log-meta">#{log.order_num as number}</p>
+  </div>
+
+  <article class="log-body" set:html={html} />
+
+  <nav class="log-nav" style={`--c: ${color}`}>
+    <div class="nav-item nav-prev">
+      {
+        prev ? (
+          <a href={`/logs/${slug}/${prev.id}`}>
+            <span class="nav-label">← 이전</span>
+            <span class="nav-log-title">{prev.title}</span>
+          </a>
+        ) : (
+          <span class="nav-disabled">← 처음 로그</span>
+        )
+      }
+    </div>
+
+    <a href={`/logs/${slug}`} class="nav-back">목록으로</a>
+
+    <div class="nav-item nav-next">
+      {
+        next ? (
+          <a href={`/logs/${slug}/${next.id}`}>
+            <span class="nav-label">다음 →</span>
+            <span class="nav-log-title">{next.title}</span>
+          </a>
+        ) : (
+          <span class="nav-disabled">마지막 로그 →</span>
+        )
+      }
+    </div>
+  </nav>
+</LogsLayout>
+
+<style>
+  .log-header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid var(--c);
+  }
+  .breadcrumb {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+  .log-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .log-meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  .log-body {
+    max-width: 720px;
+    margin: 0 auto 3rem;
+    font-size: 0.95rem;
+    line-height: 1.9;
+  }
+  .log-body :global(p) {
+    margin-bottom: 1em;
+  }
+  .log-body :global(hr) {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2em 0;
+  }
+  .log-body :global(blockquote) {
+    border-left: 3px solid var(--border);
+    padding-left: 1em;
+    color: var(--muted);
+    margin: 1.5em 0;
+  }
+
+  .log-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--c);
+    border-radius: 6px;
+  }
+  .nav-item {
+    flex: 1;
+  }
+  .nav-item a {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .nav-prev a {
+    align-items: flex-start;
+  }
+  .nav-next a {
+    align-items: flex-end;
+  }
+  .nav-label {
+    font-size: 0.73rem;
+    color: var(--muted);
+  }
+  .nav-log-title {
+    font-size: 0.88rem;
+    font-weight: 500;
+  }
+  .nav-disabled {
+    font-size: 0.83rem;
+    color: var(--muted);
+  }
+  .nav-back {
+    font-size: 0.83rem;
+    color: var(--muted);
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .nav-back:hover {
+    border-color: var(--c);
+    color: var(--c);
+    opacity: 1;
+  }
+</style>

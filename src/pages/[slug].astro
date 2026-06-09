@@ -1,0 +1,285 @@
+---
+import LogsLayout from "../layouts/LogsLayout.astro";
+import CharacterPopup from "../components/CharacterPopup";
+import ReviewForm from "../components/ReviewForm";
+import { bindings } from "../lib/bindings";
+import { r2KeyToUrl } from "../lib/r2";
+
+const { slug } = Astro.params as { slug: string };
+const { DB, R2_PUBLIC_URL } = bindings;
+
+const scenario = await DB.prepare("SELECT * FROM scenarios WHERE slug = ?")
+  .bind(slug)
+  .first<Record<string, unknown>>();
+
+if (!scenario) return Astro.redirect("/logs");
+
+const { results: chars } = await DB.prepare(
+  "SELECT * FROM characters WHERE scenario_id = ? ORDER BY sort_order",
+)
+  .bind(scenario.id)
+  .all<Record<string, unknown>>();
+
+const { results: quotes } = await DB.prepare(
+  `SELECT * FROM character_quotes WHERE character_id IN
+   (SELECT id FROM characters WHERE scenario_id = ?)`,
+)
+  .bind(scenario.id)
+  .all<Record<string, unknown>>();
+
+const quotesByChar = new Map<number, string[]>();
+for (const q of quotes) {
+  const cid = q.character_id as number;
+  if (!quotesByChar.has(cid)) quotesByChar.set(cid, []);
+  quotesByChar.get(cid)!.push(q.quote as string);
+}
+
+interface CharRow {
+  id: number;
+  name: string;
+  pl_name: string;
+  image_r2: string | null;
+  bio: string | null;
+}
+interface ReviewRow {
+  id: number;
+  pl_name: string | null;
+  content: string;
+  created_at: string;
+  scenario_color: string;
+}
+interface LogRow {
+  id: number;
+  title: string;
+  order_num: number;
+}
+
+const characters = (chars as unknown as CharRow[]).map((ch) => ({
+  id: ch.id,
+  name: ch.name,
+  pl_name: ch.pl_name,
+  image_url: r2KeyToUrl(ch.image_r2, R2_PUBLIC_URL),
+  bio: ch.bio,
+  quotes: quotesByChar.get(ch.id) ?? [],
+}));
+
+const { results: logs } = await DB.prepare(
+  "SELECT id, title, order_num FROM logs WHERE scenario_id = ? ORDER BY order_num",
+)
+  .bind(scenario.id)
+  .all<LogRow>();
+
+const { results: reviews } = await DB.prepare(
+  `
+  SELECT r.*, s.color AS scenario_color
+  FROM reviews r
+  JOIN scenarios s ON s.id = r.scenario_id
+  WHERE r.scenario_id = ?
+  ORDER BY r.created_at DESC
+`,
+)
+  .bind(scenario.id)
+  .all<ReviewRow>();
+
+const coverUrl = r2KeyToUrl(scenario.cover_r2 as string | null, R2_PUBLIC_URL);
+const color = scenario.color as string;
+---
+
+<LogsLayout
+  title={`${scenario.title as string} — ril20 logs`}
+  description={(scenario.description as string) ?? ""}
+>
+  <div class="scenario-header" style={`--c: ${color}`}>
+    {
+      coverUrl && (
+        <div
+          class="scenario-cover"
+          style={`background-image: url('${coverUrl}')`}
+        />
+      )
+    }
+    <div class="scenario-meta">
+      <h1 class="scenario-title">{scenario.title as string}</h1>
+      {
+        scenario.description && (
+          <p class="scenario-desc">{scenario.description as string}</p>
+        )
+      }
+    </div>
+  </div>
+
+  <section class="section">
+    <!-- <h2 class="section-title">참여 PC</h2> -->
+    <ul class="character-grid">
+      {
+        characters.map((ch) => (
+          <li>
+            <CharacterPopup character={ch} accentColor={color} client:load />
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">로그 목록</h2>
+    {logs.length === 0 && <p class="empty">아직 등록된 로그가 없습니다.</p>}
+    <ol class="log-list">
+      {
+        logs.map((log) => (
+          <li class="log-item" style={`--c: ${color}`}>
+            <a href={`/logs/${slug}/${log.id}`}>
+              <span class="log-num">#{log.order_num}</span>
+              <span class="log-title">{log.title}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">후기 작성</h2>
+    {
+      reviews.length > 0 && (
+        <ul class="review-feed">
+          {reviews.map((r) => (
+            <li class="review-item">
+              <span class="review-name" style={`color: ${color}`}>
+                {r.pl_name ?? "익명"}
+              </span>
+              <p class="review-content">{r.content}</p>
+              <time class="review-time">{r.created_at.slice(0, 10)}</time>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+    <ReviewForm scenarioSlug={slug} accentColor={color} client:load />
+  </section>
+</LogsLayout>
+
+<style>
+  .scenario-header {
+    position: relative;
+    width: 100vw;
+    align-items: center;
+    justify-self: center;
+    margin-bottom: 3rem;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .scenario-cover {
+    height: 200px;
+    background-size: cover;
+    background-position: center;
+  }
+  .scenario-meta {
+    padding: 8rem 15rem 1.3rem;
+  }
+  .breadcrumb {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+  .scenario-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  .scenario-desc {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .section {
+    margin-bottom: 3rem;
+  }
+  .section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .empty {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .character-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0;
+  }
+
+  .log-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .log-item a {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    border-left: 3px solid var(--c);
+    transition:
+      background 0.15s,
+      box-shadow 0.15s;
+  }
+  .log-item a:hover {
+    background: color-mix(in srgb, var(--c) 6%, var(--surface));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+  .log-num {
+    font-size: 0.73rem;
+    color: var(--muted);
+    min-width: 2rem;
+  }
+  .log-title {
+    font-size: 0.92rem;
+  }
+
+  .review-feed {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .review-item {
+    padding: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+  .review-name {
+    font-size: 0.83rem;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+  .review-content {
+    font-size: 0.88rem;
+    margin-bottom: 0.4rem;
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+  .review-time {
+    font-size: 0.73rem;
+    color: var(--muted);
+  }
+</style>

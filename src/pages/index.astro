@@ -1,0 +1,724 @@
+---
+import LogsLayout from "../layouts/LogsLayout.astro";
+import { bindings } from "../lib/bindings";
+import { r2KeyToUrl } from "../lib/r2";
+
+const { DB, R2_PUBLIC_URL } = bindings;
+
+interface ScenarioRow {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  color: string;
+  cover_r2: string | null;
+  log_count: number;
+  rule: string | null;
+  scenario_type: string | null;
+  created_at: string;
+  last_log_at: string;
+}
+
+const KNOWN_RULES: { value: string; label: string }[] = [
+  { value: "coc", label: "CoC" },
+  { value: "dnd", label: "D&D" },
+  { value: "gundok", label: "건독" },
+];
+interface ReviewRow {
+  id: number;
+  pl_name: string | null;
+  content: string;
+  created_at: string;
+  scenario_color: string;
+  scenario_title: string;
+}
+
+const { results: scenarios } = await DB.prepare(
+  `
+  SELECT s.*, COUNT(l.id) AS log_count,
+    COALESCE(MAX(l.created_at), s.created_at) AS last_log_at
+  FROM scenarios s
+  LEFT JOIN logs l ON l.scenario_id = s.id
+  GROUP BY s.id
+  ORDER BY s.created_at DESC
+`,
+).all<ScenarioRow>();
+
+const usedRules = KNOWN_RULES;
+const hasTypeFilter = true;
+
+const { results: reviews } = await DB.prepare(
+  `
+  SELECT r.*, s.color AS scenario_color, s.title AS scenario_title
+  FROM reviews r
+  JOIN scenarios s ON s.id = r.scenario_id
+  ORDER BY r.created_at DESC
+  LIMIT 50
+`,
+).all<ReviewRow>();
+
+const { results: characters } = await DB.prepare(
+  `SELECT scenario_id, name FROM characters ORDER BY scenario_id, sort_order`,
+).all<{ scenario_id: number; name: string }>();
+
+const charsByScenario = new Map<number, string[]>();
+for (const c of characters) {
+  const list = charsByScenario.get(c.scenario_id) ?? [];
+  list.push(c.name);
+  charsByScenario.set(c.scenario_id, list);
+}
+---
+
+<LogsLayout title="시나리오">
+  <section class="scenarios">
+    <!-- <h1 class="page-title">시나리오 목록</h1> -->
+    <div class="filter-bar">
+      <div class="filter-trigger-wrap">
+        <button
+          class="filter-trigger"
+          id="filter-trigger"
+          aria-expanded="false"
+          aria-controls="filter-panel"
+        >
+          <svg
+            class="filter-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M4 7H20"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"></path>
+            <path
+              d="M7 12L17 12"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"></path>
+            <path
+              d="M11 17H13"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"></path>
+          </svg>
+          필터
+        </button>
+        <div class="filter-panel" id="filter-panel" hidden>
+          {
+            usedRules.length > 0 && (
+              <div class="filter-section">
+                <span class="filter-section-label">룰</span>
+                <div class="filter-checks">
+                  {usedRules.map((r) => (
+                    <label class="filter-check-label">
+                      <input
+                        type="checkbox"
+                        class="filter-check"
+                        data-filter-rule={r.value}
+                      />
+                      {r.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )
+          }
+          {
+            hasTypeFilter && (
+              <div class="filter-section">
+                <span class="filter-section-label">유형</span>
+                <div class="filter-checks">
+                  <label class="filter-check-label">
+                    <input
+                      type="checkbox"
+                      class="filter-check"
+                      data-filter-type="campaign"
+                    />
+                    캠페인
+                  </label>
+                  <label class="filter-check-label">
+                    <input
+                      type="checkbox"
+                      class="filter-check"
+                      data-filter-type="short"
+                    />
+                    단편
+                  </label>
+                </div>
+              </div>
+            )
+          }
+        </div>
+      </div>
+      <div class="sort-segment" id="sort-segment">
+        <span class="sort-thumb" id="sort-thumb" aria-hidden="true"></span>
+        <button class="sort-seg-btn active" data-sort="created">등록순</button>
+        <button class="sort-seg-btn" data-sort="name">이름순</button>
+        <button class="sort-seg-btn" data-sort="updated">업데이트순</button>
+      </div>
+    </div>
+    {scenarios.length === 0 && <p class="empty">등록된 시나리오가 없습니다.</p>}
+    <ul class="scenario-grid">
+      {
+        scenarios.map((s) => {
+          const coverUrl = r2KeyToUrl(s.cover_r2, R2_PUBLIC_URL);
+          const chars = charsByScenario.get(s.id) ?? [];
+          return (
+            <li
+              class="scenario-card"
+              style={`--c: ${s.color}`}
+              data-rule={s.rule ?? ""}
+              data-type={s.scenario_type ?? ""}
+              data-title={s.title}
+              data-created={s.created_at}
+              data-updated={s.last_log_at}
+            >
+              <a href={`/logs/${s.slug}`}>
+                <div class="cover-wrap">
+                  <div
+                    class={`cover${!coverUrl ? " cover--placeholder" : ""}`}
+                    style={
+                      coverUrl
+                        ? `background-image: url('${coverUrl}')`
+                        : undefined
+                    }
+                  />
+                  <div class="cover-info">
+                    <h2 class="card-title">{s.title}</h2>
+                    <span class="card-meta">{s.log_count}개 로그</span>
+                    {/* {s.description && <p class="card-desc">{s.description}</p>} */}
+                    {chars.length > 0 && (
+                      <div class="pc-names">
+                        {chars.map((name, i) => (
+                          <span class="pc-name" style={`--i: ${i}`}>
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </section>
+
+  <section class="reviews-section">
+    <!-- <h2 class="section-title">후기 방명록</h2> -->
+    {reviews.length === 0 && <p class="empty">아직 작성된 후기가 없습니다.</p>}
+    <ul class="review-feed">
+      {
+        reviews.map((r) => (
+          <li class="review-item">
+            <span class="review-name" style={`color: ${r.scenario_color}`}>
+              {r.pl_name ?? "익명"}
+            </span>
+            <span class="review-content">{r.content}</span>
+            <time class="review-time">{r.created_at.slice(0, 10)}</time>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+  <script>
+    import autoAnimate from "@formkit/auto-animate";
+
+    (() => {
+      const gridEl = document.querySelector<HTMLUListElement>(".scenario-grid");
+      if (!gridEl) return;
+      const grid = gridEl;
+      autoAnimate(grid, { duration: 220, easing: "ease-out" });
+      const cards = Array.from(
+        grid.querySelectorAll<HTMLLIElement>(".scenario-card"),
+      );
+
+      const trigger = document.getElementById(
+        "filter-trigger",
+      ) as HTMLButtonElement | null;
+      const panel = document.getElementById(
+        "filter-panel",
+      ) as HTMLDivElement | null;
+      const badge = document.getElementById(
+        "filter-badge",
+      ) as HTMLSpanElement | null;
+
+      let sortBy = "created";
+
+      // --- panel toggle ---
+      trigger?.addEventListener("click", () => {
+        const isOpen = !panel?.hidden;
+        if (panel) panel.hidden = isOpen;
+        trigger.setAttribute("aria-expanded", String(!isOpen));
+      });
+
+      document.addEventListener("click", (e) => {
+        const wrap = document.querySelector(".filter-trigger-wrap");
+        if (
+          wrap &&
+          !wrap.contains(e.target as Node) &&
+          panel &&
+          !panel.hidden
+        ) {
+          panel.hidden = true;
+          trigger?.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      // --- filter state ---
+      function getChecked(attr: string): Set<string> {
+        const set = new Set<string>();
+        document
+          .querySelectorAll<HTMLInputElement>(`input[${attr}]:checked`)
+          .forEach((el) => {
+            const val = el.getAttribute(attr);
+            if (val) set.add(val);
+          });
+        return set;
+      }
+
+      function updateBadge() {
+        const count = document.querySelectorAll(".filter-check:checked").length;
+        if (badge) {
+          badge.textContent = String(count);
+          badge.hidden = count === 0;
+        }
+        trigger?.classList.toggle("filter-trigger--active", count > 0);
+      }
+
+      function apply() {
+        const rules = getChecked("data-filter-rule");
+        const types = getChecked("data-filter-type");
+
+        const visible = cards.filter((c) => {
+          const ruleOk = rules.size === 0 || rules.has(c.dataset.rule ?? "");
+          const typeOk = types.size === 0 || types.has(c.dataset.type ?? "");
+          return ruleOk && typeOk;
+        });
+        const hidden = cards.filter((c) => !visible.includes(c));
+
+        if (sortBy === "name") {
+          visible.sort((a, b) =>
+            (a.dataset.title ?? "").localeCompare(b.dataset.title ?? "", "ko"),
+          );
+        } else if (sortBy === "updated") {
+          visible.sort((a, b) =>
+            (b.dataset.updated ?? "").localeCompare(a.dataset.updated ?? ""),
+          );
+        } else {
+          visible.sort((a, b) =>
+            (b.dataset.created ?? "").localeCompare(a.dataset.created ?? ""),
+          );
+        }
+
+        hidden.forEach((c) => (c.style.display = "none"));
+        visible.forEach((c) => {
+          c.style.display = "";
+          grid.appendChild(c);
+        });
+
+        updateBadge();
+      }
+
+      document
+        .querySelectorAll<HTMLInputElement>(".filter-check")
+        .forEach((cb) => {
+          cb.addEventListener("change", apply);
+        });
+
+      // --- segmented sort control ---
+      const segment = document.getElementById("sort-segment");
+      const thumb = document.getElementById("sort-thumb") as HTMLElement | null;
+
+      function moveThumb(activeBtn: HTMLElement) {
+        if (!thumb || !segment) return;
+        const segRect = segment.getBoundingClientRect();
+        const btnRect = activeBtn.getBoundingClientRect();
+        thumb.style.left = `${btnRect.left - segRect.left}px`;
+        thumb.style.width = `${btnRect.width}px`;
+        thumb.style.height = `${btnRect.height}px`;
+      }
+
+      const sortBtns = Array.from(
+        document.querySelectorAll<HTMLButtonElement>(".sort-seg-btn"),
+      );
+      sortBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          sortBy = btn.dataset.sort ?? "created";
+          sortBtns.forEach((b) => b.classList.toggle("active", b === btn));
+          moveThumb(btn);
+          apply();
+        });
+      });
+
+      // init thumb position
+      const initialActive = sortBtns.find((b) =>
+        b.classList.contains("active"),
+      );
+      if (initialActive) {
+        // defer one frame so layout is complete
+        requestAnimationFrame(() => {
+          if (thumb) thumb.style.transition = "none";
+          moveThumb(initialActive);
+          requestAnimationFrame(() => {
+            if (thumb) thumb.style.transition = "";
+          });
+        });
+      }
+    })();
+  </script>
+</LogsLayout>
+
+<style>
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    color: var(--text);
+  }
+  .empty {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .scenario-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.5rem;
+    padding: 0;
+    margin-bottom: 4rem;
+  }
+  .scenario-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    position: relative;
+    z-index: 0;
+    transition:
+      transform 0.15s,
+      box-shadow 0.15s,
+      z-index 0s;
+  }
+  .scenario-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    z-index: 20;
+  }
+  .scenario-card a {
+    display: block;
+  }
+  .cover-wrap {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-radius: 6px 6px 0 0;
+  }
+  .cover {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--border);
+    transition: filter 0.3s ease;
+  }
+  .cover--placeholder {
+    background-color: color-mix(in srgb, var(--c) 15%, var(--border));
+  }
+  .scenario-card:hover .cover {
+    filter: blur(4px) brightness(0.7);
+  }
+  .cover-info {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0.85rem 1rem;
+    opacity: 0;
+    transform: translateY(4px);
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s ease;
+  }
+  .card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    margin-bottom: 0.2rem;
+  }
+  .card-meta {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.75);
+  }
+  .card-desc {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.45;
+    margin-top: 0.4rem;
+    opacity: 0;
+    transform: translateY(4px);
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s ease;
+  }
+  .scenario-card:hover .cover-info {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .scenario-card:hover .pc-name {
+    transform: translateX(0);
+    transition-delay: calc(var(--i) * 0.04s);
+  }
+
+  .pc-names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+    pointer-events: none;
+  }
+  .pc-name {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 99px;
+    padding: 0.15rem 0.55rem;
+    transform: translateY(6px);
+    transition:
+      opacity 0.18s ease,
+      transform 0.18s ease;
+  }
+  .scenario-card:hover .pc-name {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: calc(var(--i) * 0.04s);
+  }
+
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  /* trigger button */
+  .filter-trigger-wrap {
+    position: relative;
+  }
+  .filter-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.73rem;
+    padding: 0.25rem 0.65rem;
+    border: 0px solid transparent;
+    border-radius: 99px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition:
+      background 0.12s,
+      color 0.12s,
+      border-color 0.12s;
+  }
+  .filter-trigger:hover {
+    color: var(--text);
+  }
+  .filter-trigger--active {
+    background: var(--text);
+    color: var(--bg, #fff);
+  }
+  .filter-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  .filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.1em;
+    height: 1.1em;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 99px;
+    background: var(--bg, #fff);
+    color: var(--text);
+    padding: 0 0.2em;
+    line-height: 1;
+  }
+  .filter-trigger--active .filter-badge {
+    background: var(--bg, #fff);
+    color: var(--text);
+  }
+
+  /* dropdown panel */
+  .filter-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 100;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    min-width: 160px;
+    display: flex;
+    flex-direction: row;
+    gap: 2.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+  .filter-panel[hidden] {
+    display: none;
+  }
+  .filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .filter-section-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.1rem;
+  }
+  .filter-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .filter-check-label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.8rem;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+  }
+  .filter-check {
+    accent-color: var(--text);
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+  }
+
+  /* segmented sort control */
+  .sort-segment {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 2px;
+    margin-left: auto;
+  }
+  .sort-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    border-radius: 99px;
+    background: var(--text);
+    pointer-events: none;
+    z-index: 0;
+    transition:
+      left 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+      width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+      height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .sort-seg-btn {
+    position: relative;
+    z-index: 1;
+    font-size: 0.73rem;
+    padding: 0.22rem 0.65rem;
+    border-radius: 99px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+  .sort-seg-btn:hover {
+    color: var(--text);
+  }
+  .sort-seg-btn.active {
+    color: var(--bg, #fff);
+  }
+
+  /* review section */
+  .section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .reviews-section {
+    background-color: var(--surface);
+    max-height: 300px;
+    border-radius: 80px 0;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .reviews-section::-webkit-scrollbar {
+    display: none;
+  }
+
+  .review-feed {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    padding: 0 40px;
+    margin: 0;
+  }
+  .review-item {
+    display: grid;
+    grid-template-columns: 6rem 1fr auto;
+    gap: 1.5rem;
+    align-items: baseline;
+    font-size: 0.88rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .review-item:last-child {
+    border-bottom: none;
+  }
+
+  .review-name {
+    font-weight: 600;
+    font-size: 0.83rem;
+  }
+  .review-content {
+    color: var(--text);
+  }
+  .review-time {
+    font-size: 0.73rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+</style>

@@ -1,0 +1,40 @@
+{
+  "name": "ril20-logs-page",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node -e \"const fs=require('fs');const c=JSON.parse(fs.readFileSync('dist/server/wrangler.json','utf8'));c.assets.directory='../client';c.d1_databases=c.d1_databases.map(d=>({...d,migrations_dir:'../../migrations'}));fs.writeFileSync('dist/server/wrangler.json',JSON.stringify(c,null,2));fs.mkdirSync('dist/server/.vite',{recursive:true})\"",
+    "watch": "nodemon --watch src --watch functions --ext astro,ts,tsx,css,js,mjs --exec \"npm run build\" --delay 1",
+    "wrangler:dev": "wrangler dev --config dist/server/wrangler.json --persist-to .wrangler",
+    "migrate:local": "wrangler d1 migrations apply foundry-db --local --persist-to .wrangler",
+    "migrate": "wrangler d1 migrations apply foundry-db",
+    "preview": "astro preview",
+    "astro": "astro",
+    "generate-types": "wrangler types"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/cloudflare": "^13.5.2",
+    "@astrojs/react": "^5.0.5",
+    "@cloudflare/workers-types": "^4.20260520.1",
+    "@formkit/auto-animate": "^0.9.0",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "astro": "^6.3.5",
+    "hono": "^4.12.21",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.93.0"
+  },
+  "overrides": {
+    "vite": "^7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

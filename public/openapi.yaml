@@ -1,0 +1,524 @@
+openapi: 3.0.3
+info:
+  title: ril20 Logs API
+  version: 1.0.0
+  description: |
+    ril20.com/logs TRPG 로그 아카이브 API.
+
+    관리자 엔드포인트는 `Authorization: Bearer {ADMIN_TOKEN}` 헤더가 필요합니다.
+
+servers:
+  - url: https://ril20.com/api
+    description: Production
+  - url: http://localhost:4321/api
+    description: Local dev (wrangler dev)
+
+tags:
+  - name: scenarios
+    description: 시나리오(어드벤처) 목록 및 상세
+  - name: logs
+    description: 로그 열람
+  - name: reviews
+    description: 후기
+  - name: admin
+    description: 관리자 전용 (Bearer 토큰 필요)
+
+paths:
+  /scenarios:
+    get:
+      tags: [scenarios]
+      summary: 시나리오 목록 조회
+      operationId: listScenarios
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScenarioSummary'
+
+  /scenarios/{slug}:
+    get:
+      tags: [scenarios]
+      summary: 시나리오 상세 조회 (캐릭터 + 로그 목록 포함)
+      operationId: getScenario
+      parameters:
+        - $ref: '#/components/parameters/slug'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /scenarios/{slug}/logs/{logId}:
+    get:
+      tags: [logs]
+      summary: 로그 HTML 내용 조회
+      operationId: getLog
+      parameters:
+        - $ref: '#/components/parameters/slug'
+        - name: logId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 로그 HTML 및 이전/다음 정보
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reviews:
+    get:
+      tags: [reviews]
+      summary: 전체 후기 목록 (홈 피드용)
+      operationId: listAllReviews
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+
+  /scenarios/{slug}/reviews:
+    get:
+      tags: [reviews]
+      summary: 시나리오별 후기 목록
+      operationId: listScenarioReviews
+      parameters:
+        - $ref: '#/components/parameters/slug'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+    post:
+      tags: [reviews]
+      summary: 후기 작성
+      operationId: createReview
+      parameters:
+        - $ref: '#/components/parameters/slug'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewInput'
+      responses:
+        '201':
+          description: 작성 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ──────────────── 관리자 API ────────────────
+
+  /admin/scenarios:
+    post:
+      tags: [admin]
+      summary: 시나리오 생성
+      operationId: createScenario
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScenarioInput'
+      responses:
+        '201':
+          description: 생성 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScenarioSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/scenarios/{id}:
+    put:
+      tags: [admin]
+      summary: 시나리오 수정
+      operationId: updateScenario
+      security:
+        - BearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScenarioInput'
+      responses:
+        '200':
+          description: 수정 완료
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [admin]
+      summary: 시나리오 삭제 (PC·로그·후기 CASCADE)
+      operationId: deleteScenario
+      security:
+        - BearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: 삭제 완료
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/scenarios/{id}/characters:
+    post:
+      tags: [admin]
+      summary: 캐릭터(PC) 추가
+      operationId: createCharacter
+      security:
+        - BearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacterInput'
+      responses:
+        '201':
+          description: 추가 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Character'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/characters/{id}:
+    put:
+      tags: [admin]
+      summary: 캐릭터 수정
+      operationId: updateCharacter
+      security:
+        - BearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacterInput'
+      responses:
+        '200':
+          description: 수정 완료
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [admin]
+      summary: 캐릭터 삭제
+      operationId: deleteCharacter
+      security:
+        - BearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: 삭제 완료
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/scenarios/{id}/logs:
+    post:
+      tags: [admin]
+      summary: 로그 HTML 업로드
+      operationId: uploadLog
+      security:
+        - BearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, order_num, file]
+              properties:
+                title:
+                  type: string
+                order_num:
+                  type: integer
+                file:
+                  type: string
+                  format: binary
+                  description: 로그 HTML 파일
+      responses:
+        '201':
+          description: 업로드 완료
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/logs/{id}:
+    delete:
+      tags: [admin]
+      summary: 로그 삭제 (R2 파일 포함)
+      operationId: deleteLog
+      security:
+        - BearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: 삭제 완료
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/reviews/{id}:
+    delete:
+      tags: [admin]
+      summary: 후기 삭제 (모더레이션)
+      operationId: deleteReview
+      security:
+        - BearerToken: []
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: 삭제 완료
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/upload:
+    post:
+      tags: [admin]
+      summary: R2에 이미지 파일 업로드
+      operationId: uploadFile
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [key, file]
+              properties:
+                key:
+                  type: string
+                  description: R2 오브젝트 키 (예: scenarios/dark-herald/cover.jpg)
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: 업로드 완료
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key: { type: string }
+                  url: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  parameters:
+    slug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+        example: dark-herald
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  schemas:
+    ScenarioSummary:
+      type: object
+      properties:
+        id:          { type: integer }
+        slug:        { type: string }
+        title:       { type: string }
+        description: { type: string, nullable: true }
+        color:       { type: string, example: '#c0392b' }
+        cover_url:   { type: string, nullable: true }
+        log_count:   { type: integer }
+        created_at:  { type: string, format: date-time }
+
+    ScenarioDetail:
+      allOf:
+        - $ref: '#/components/schemas/ScenarioSummary'
+        - type: object
+          properties:
+            characters:
+              type: array
+              items:
+                $ref: '#/components/schemas/Character'
+            logs:
+              type: array
+              items:
+                $ref: '#/components/schemas/LogSummary'
+
+    Character:
+      type: object
+      properties:
+        id:         { type: integer }
+        name:       { type: string }
+        pl_name:    { type: string }
+        image_url:  { type: string, nullable: true }
+        bio:        { type: string, nullable: true }
+        sort_order: { type: integer }
+        quotes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:    { type: integer }
+              quote: { type: string }
+
+    CharacterInput:
+      type: object
+      required: [name, pl_name]
+      properties:
+        name:       { type: string }
+        pl_name:    { type: string }
+        image_r2:   { type: string, nullable: true }
+        bio:        { type: string, nullable: true }
+        sort_order: { type: integer, default: 0 }
+        quotes:
+          type: array
+          items:
+            type: string
+
+    LogSummary:
+      type: object
+      properties:
+        id:        { type: integer }
+        title:     { type: string }
+        order_num: { type: integer }
+
+    LogDetail:
+      type: object
+      properties:
+        id:         { type: integer }
+        title:      { type: string }
+        order_num:  { type: integer }
+        html:       { type: string, description: '로그 HTML 내용 (R2에서 가져옴)' }
+        prev:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/LogSummary'
+        next:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/LogSummary'
+
+    Review:
+      type: object
+      properties:
+        id:          { type: integer }
+        scenario_id: { type: integer }
+        scenario_color: { type: string, description: '시나리오 고유 색상 (닉네임 색상에 사용)' }
+        pl_name:     { type: string, nullable: true, description: 'null이면 익명' }
+        content:     { type: string }
+        created_at:  { type: string, format: date-time }
+
+    ReviewInput:
+      type: object
+      required: [content]
+      properties:
+        pl_name: { type: string, nullable: true }
+        content:
+          type: string
+          minLength: 1
+          maxLength: 1000
+
+    ScenarioInput:
+      type: object
+      required: [slug, title, color]
+      properties:
+        slug:        { type: string, pattern: '^[a-z0-9-]+$' }
+        title:       { type: string }
+        description: { type: string, nullable: true }
+        color:       { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        cover_r2:    { type: string, nullable: true }
+
+    Error:
+      type: object
+      properties:
+        error:   { type: string }
+        message: { type: string }
+
+  responses:
+    NotFound:
+      description: 리소스를 찾을 수 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: 잘못된 요청
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: 인증 필요 (Bearer 토큰 없거나 유효하지 않음)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    BearerToken:
+      type: http
+      scheme: bearer
+      description: wrangler.jsonc의 ADMIN_TOKEN 환경 변수 값
