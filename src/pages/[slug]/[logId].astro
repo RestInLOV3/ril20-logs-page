@@ -41,7 +41,7 @@ const color = scenario.color as string;
 <LogsLayout title={`${log.title as string} — ${scenario.title as string}`}>
   <div class="log-header" style={`--c: ${color}`}>
     <p class="breadcrumb">
-      <a href="/logs">목록</a>
+      <a href="/logs">시나리오</a>
       <span>›</span>
       <a href={`/logs/${slug}`}>{scenario.title as string}</a>
     </p>
@@ -96,6 +96,10 @@ const color = scenario.color as string;
     gap: 0.4rem;
     align-items: center;
   }
+  .breadcrumb a {
+    color: var(--muted);
+    text-decoration: none;
+  }
   .log-title {
     font-size: 1.5rem;
     font-weight: 700;
@@ -109,7 +113,6 @@ const color = scenario.color as string;
 
   .log-body {
     max-width: 720px;
-    margin: 0 auto 3rem;
     font-size: 0.95rem;
     line-height: 1.9;
   }
@@ -135,9 +138,9 @@ const color = scenario.color as string;
     gap: 1rem;
     padding: 1.25rem 1.5rem;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-top: 2px solid var(--c);
-    border-radius: 6px;
+  }
+  .log-nav a {
+    text-decoration: none;
   }
   .nav-item {
     flex: 1;
@@ -146,6 +149,8 @@ const color = scenario.color as string;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
+    text-decoration: none;
+    color: var(--text);
   }
   .nav-prev a {
     align-items: flex-start;

@@ -48,7 +48,7 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
       onSubmit={handleSubmit}
       style={{ "--c": accentColor } as React.CSSProperties}
     >
-      <h3 className="form-title">후기 작성</h3>
+      {/* <h3 className="form-title">후기 작성</h3> */}
 
       <div className="form-row">
         <label className="form-label">
