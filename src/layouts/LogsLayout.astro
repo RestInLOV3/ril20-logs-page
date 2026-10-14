@@ -4,8 +4,11 @@ interface Props {
   description?: string;
   image?: string | null;
 }
-const { title = "ril20 logs", description = "RIL20 로그 아카이브", image } =
-  Astro.props;
+const {
+  title = "ril20 logs",
+  description = "RIL20 로그 아카이브",
+  image,
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -17,7 +20,10 @@ const { title = "ril20 logs", description = "RIL20 로그 아카이브", image }
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     {image && <meta property="og:image" content={image} />}
-    <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
+    <meta
+      name="twitter:card"
+      content={image ? "summary_large_image" : "summary"}
+    />
     {image && <meta name="twitter:image" content={image} />}
     <title>{title}</title>
     <link
@@ -48,6 +54,14 @@ const { title = "ril20 logs", description = "RIL20 로그 아카이브", image }
         color: var(--text);
         min-height: 100vh;
         line-height: 1.7;
+        letter-spacing: -0.03em;
+        overflow-x: clip;
+      }
+      button,
+      input,
+      textarea,
+      select {
+        letter-spacing: inherit;
       }
       a {
         color: inherit;

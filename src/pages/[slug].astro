@@ -63,6 +63,14 @@ const characters = (chars as unknown as CharRow[]).map((ch) => ({
   quotes: quotesByChar.get(ch.id) ?? [],
 }));
 
+// 모바일 줄 나눔: 4인 이상이면 두 줄 (2+2, 3+2, 3+3). 데스크톱은 한 줄로 이어 붙임
+const perRow =
+  characters.length >= 4 ? Math.ceil(characters.length / 2) : characters.length;
+const charRows = [];
+for (let i = 0; i < characters.length; i += perRow) {
+  charRows.push(characters.slice(i, i + perRow));
+}
+
 const { results: logs } = await DB.prepare(
   "SELECT id, title, order_num FROM logs WHERE scenario_id = ? ORDER BY order_num",
 )
@@ -106,15 +114,22 @@ const color = scenario.color as string;
 
   <section class="section">
     <!-- <h2 class="section-title">참여 PC</h2> -->
-    <ul class="character-grid">
+    <div class="character-grid">
       {
-        characters.map((ch) => (
-          <li>
-            <CharacterPopup character={ch} accentColor={color} client:load />
-          </li>
+        charRows.map((row, r) => (
+          <ul class="char-row">
+            {row.map((ch, j) => {
+              const i = r * perRow + j;
+              return (
+                <li class:list={{ "g-down": i % 2 === 1, "r-down": j % 2 === 1 }}>
+                  <CharacterPopup character={ch} accentColor={color} client:load />
+                </li>
+              );
+            })}
+          </ul>
         ))
       }
-    </ul>
+    </div>
   </section>
 
   <section class="section">
@@ -135,7 +150,7 @@ const color = scenario.color as string;
   </section>
 
   <section class="section">
-    <h2 class="section-title">후기 작성</h2>
+    <h2 class="section-title">후기</h2>
     {
       reviews.length > 0 && (
         <ul class="review-feed">
@@ -235,17 +250,59 @@ const color = scenario.color as string;
     font-size: 0.9rem;
   }
 
+  /* 마름모 지그재그 배치: 이웃 마름모가 대각선 반만큼 겹치고, 짝수 번째는 아래로 내려감.
+     --d(마름모 대각선)는 인원수와 무관하게 화면 폭으로만 결정.
+     n개 한 줄의 폭 = d·(n+1)/2 + (n-1)·g → 데스크톱은 6개, 모바일은 3개 기준 */
   .character-grid {
-    list-style: none;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    --g: 0.5rem;
+    --d: min(130px, (100% - 5 * var(--g)) * 2 / 7);
+    display: flex;
     justify-content: center;
-    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .char-row {
+    display: contents;
+    list-style: none;
     padding: 0;
+  }
+  .char-row > li {
+    position: relative;
+    flex: 0 0 auto;
+    width: var(--d);
+    aspect-ratio: 1;
+    margin-left: calc(var(--d) / -2 + var(--g));
+  }
+  .char-row:first-child > li:first-child {
+    margin-left: 0;
+  }
+  .char-row > li.g-down {
+    margin-top: calc(var(--d) / 2 + var(--g));
+  }
+  .char-row > li:hover,
+  .char-row > li:focus-within {
+    z-index: 1;
   }
   @media (max-width: 600px) {
     .character-grid {
-      grid-template-columns: repeat(2, 1fr);
+      --d: min(110px, (100% - 2 * var(--g)) / 2);
+      flex-direction: column;
+      align-items: stretch;
+      gap: var(--g);
+    }
+    .char-row {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      width: 100%;
+    }
+    .char-row > li:first-child {
+      margin-left: 0;
+    }
+    .char-row > li.g-down {
+      margin-top: 0;
+    }
+    .char-row > li.r-down {
+      margin-top: calc(var(--d) / 2 + var(--g));
     }
   }
 

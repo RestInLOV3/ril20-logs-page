@@ -55,17 +55,17 @@ export default function CharacterPopup({ character, accentColor }: Props) {
         onClick={() => setOpen(true)}
         aria-label={`${character.name} 상세 정보`}
       >
-        <div className="char-avatar">
+        <span className="char-diamond">
           {character.image_url ? (
-            <img src={character.image_url} alt={character.name} />
+            <img src={character.image_url} alt="" />
           ) : (
-            <div className="char-avatar-placeholder" />
+            <span className="char-avatar-placeholder" />
           )}
-        </div>
-        <div className="char-info">
-          <p className="char-name">{character.name}</p>
-          <p className="char-pl">{character.pl_name}</p>
-        </div>
+          <span className="char-info">
+            <span className="char-name">{character.name}</span>
+            <span className="char-pl">{character.pl_name}</span>
+          </span>
+        </span>
       </button>
 
       <dialog
@@ -104,41 +104,75 @@ export default function CharacterPopup({ character, accentColor }: Props) {
       </dialog>
 
       <style>{`
+        /* 마름모 카드: 바깥(버튼)이 강조색 테두리, 안쪽이 이미지. clip-path로 클릭 영역도 마름모로 제한 */
         .char-card {
-          background: var(--surface, #fff);
-          border: 1px solid var(--border, #e2e2de);
-          border-radius: 6px;
-          padding: 0.75rem;
-          display: flex;
-          justify-content: space-around;
-          align-items: center;
-          gap: 0.75rem;
+          --diamond: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+          position: relative;
+          display: block;
+          width: 100%;
+          height: 100%;
+          padding: 0;
+          border: none;
+          background: var(--c);
+          clip-path: var(--diamond);
           cursor: pointer;
-          width: 180px;
-          color: var(--text, #1c1c1a);
           font-family: inherit;
-          transition: box-shadow 0.15s, border-color 0.15s;
+          transition: transform 0.3s ease;
         }
-        .char-card:hover { border-color: var(--c); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .char-avatar {
-          width: 52px;
-          height: 52px;
-          border-radius: 50%;
+        .char-diamond {
+          position: absolute;
+          inset: 4px;
+          clip-path: var(--diamond);
+          background: var(--surface, #fff);
           overflow: hidden;
-          border: 2px solid var(--c);
-          flex-shrink: 0;
         }
-        .char-avatar img, .char-avatar-placeholder {
+        .char-diamond img, .char-avatar-placeholder {
+          display: block;
           width: 100%;
           height: 100%;
           object-fit: cover;
           background: var(--border, #e2e2de);
+          transition: transform 0.4s ease, filter 0.3s ease;
         }
         .char-info {
-          margin-right: 1.25rem;
+          position: absolute;
+          inset: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 0 22%;
+          text-align: center;
+          color: #fff;
+          background: rgba(0, 0, 0, 0.5);
+          opacity: 0;
+          transition: opacity 0.3s ease;
         }
-        .char-name { font-size: 0.88rem; font-weight: 600; margin-bottom: 0.1rem; }
-        .char-pl { font-size: 0.73rem; color: var(--muted, #8a8a86); }
+        .char-name, .char-pl {
+          display: block;
+          transform: translateY(8px);
+          transition: transform 0.35s ease;
+        }
+        .char-name { font-size: 0.88rem; font-weight: 600; line-height: 1.3; word-break: keep-all; }
+        .char-pl { font-size: 0.72rem; opacity: 0.8; margin-top: 0.2rem; transition-delay: 0.05s; }
+
+        .char-card:focus-visible { outline: none; }
+        /* 이름 노출은 마우스가 있는 데스크톱에서만. 모바일은 탭 → 팝업으로 확인 */
+        @media (hover: hover) and (min-width: 601px) {
+          .char-card:hover, .char-card:focus-visible { transform: scale(1.06); }
+          .char-card:hover .char-diamond img,
+          .char-card:focus-visible .char-diamond img { transform: scale(1.08); filter: blur(1px); }
+          .char-card:hover .char-info,
+          .char-card:focus-visible .char-info { opacity: 1; }
+          .char-card:hover :is(.char-name, .char-pl),
+          .char-card:focus-visible :is(.char-name, .char-pl) { transform: none; }
+        }
+        @media (max-width: 600px) {
+          .char-info { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .char-card, .char-card *, .char-card img { transition: none !important; }
+        }
 
         .char-dialog {
           background: var(--surface, #fff);

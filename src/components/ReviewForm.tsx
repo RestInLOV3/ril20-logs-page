@@ -6,6 +6,7 @@ interface Props {
 }
 
 export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
+  const [isOpen, setIsOpen] = useState(false);
   const [plName, setPlName] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [content, setContent] = useState("");
@@ -44,68 +45,135 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
+    <div
+      className="review-form-wrap"
       style={{ "--c": accentColor } as React.CSSProperties}
     >
-      {/* <h3 className="form-title">후기 작성</h3> */}
-
-      <div className="form-row">
-        <label className="form-label">
-          {"PL 이름"}
-          <input
-            type="text"
-            value={plName}
-            onChange={(e) => setPlName(e.target.value)}
-            disabled={isAnonymous || status === "loading"}
-            placeholder={isAnonymous ? "익명" : "닉네임"}
-            maxLength={30}
-            className="form-input"
-          />
-        </label>
-        <label className="anon-label">
-          <input
-            type="checkbox"
-            checked={isAnonymous}
-            onChange={(e) => setIsAnonymous(e.target.checked)}
-            disabled={status === "loading"}
-          />
-          {" 익명으로 작성"}
-        </label>
-      </div>
-
-      <div className="form-row">
-        <label className="form-label full">
-          {"내용"}
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            disabled={status === "loading"}
-            placeholder="후기를 작성해주세요 (최대 1000자)"
-            maxLength={1000}
-            rows={4}
-            className="form-textarea"
-            required
-          />
-        </label>
-        <div className="char-count">{content.length} / 1000</div>
-      </div>
-
-      {status === "error" && <p className="form-error">{errorMsg}</p>}
-      {status === "done" && (
-        <p className="form-success">후기가 등록되었습니다. 감사합니다!</p>
-      )}
-
       <button
-        type="submit"
-        disabled={status === "loading" || !content.trim()}
-        className="form-submit"
+        type="button"
+        className={`review-toggle${isOpen ? " open" : ""}`}
+        onClick={() => setIsOpen((v) => !v)}
+        aria-expanded={isOpen}
+        aria-controls="review-form-panel"
       >
-        {status === "loading" ? "등록 중…" : "후기 등록"}
+        <span>{isOpen ? "닫기" : "후기 작성"}</span>
+        <span className="review-toggle-icon" aria-hidden="true">
+          +
+        </span>
       </button>
 
+      <div
+        id="review-form-panel"
+        className={`review-panel${isOpen ? " open" : ""}`}
+        inert={!isOpen}
+      >
+        <div className="review-panel-inner">
+          <form className="review-form" onSubmit={handleSubmit}>
+            {/* <h3 className="form-title">후기 작성</h3> */}
+
+            <div className="form-row">
+              <label className="form-label">
+                {"PL 이름"}
+                <input
+                  type="text"
+                  value={plName}
+                  onChange={(e) => setPlName(e.target.value)}
+                  disabled={isAnonymous || status === "loading"}
+                  placeholder={isAnonymous ? "익명" : "닉네임"}
+                  maxLength={30}
+                  className="form-input"
+                />
+              </label>
+              <label className="anon-label">
+                <input
+                  type="checkbox"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  disabled={status === "loading"}
+                />
+                {" 익명으로 작성"}
+              </label>
+            </div>
+
+            <div className="form-row">
+              <label className="form-label full">
+                {"내용"}
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  disabled={status === "loading"}
+                  placeholder="후기를 작성해주세요 (최대 1000자)"
+                  maxLength={1000}
+                  rows={4}
+                  className="form-textarea"
+                  required
+                />
+              </label>
+              <div className="char-count">{content.length} / 1000</div>
+            </div>
+
+            {status === "error" && <p className="form-error">{errorMsg}</p>}
+            {status === "done" && (
+              <p className="form-success">후기가 등록되었습니다. 감사합니다!</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={status === "loading" || !content.trim()}
+              className="form-submit"
+            >
+              {status === "loading" ? "등록 중…" : "후기 등록"}
+            </button>
+          </form>
+        </div>
+      </div>
+
       <style>{`
-        form[style] {
+        .review-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          width: 100%;
+          padding: 0.75rem 1rem;
+          background: var(--surface, #fff);
+          border: 1px solid var(--border, #e2e2de);
+          border-radius: 6px;
+          color: var(--text, #1c1c1a);
+          font-size: 0.88rem;
+          font-family: inherit;
+          font-weight: 500;
+          cursor: pointer;
+          transition: border-color 0.15s, color 0.15s;
+        }
+        .review-toggle:hover,
+        .review-toggle.open { border-color: var(--c); color: var(--c); }
+        .review-toggle-icon {
+          font-size: 1.1rem;
+          line-height: 1;
+          transition: transform 0.3s ease;
+        }
+        .review-toggle.open .review-toggle-icon { transform: rotate(45deg); }
+
+        .review-panel {
+          display: grid;
+          grid-template-rows: 0fr;
+          opacity: 0;
+          transform: translateY(-6px);
+          transition: grid-template-rows 0.35s ease, opacity 0.25s ease, transform 0.35s ease;
+        }
+        .review-panel.open {
+          grid-template-rows: 1fr;
+          opacity: 1;
+          transform: none;
+        }
+        .review-panel-inner { min-height: 0; overflow: hidden; }
+        .review-panel.open .review-panel-inner { padding-top: 0.75rem; }
+        @media (prefers-reduced-motion: reduce) {
+          .review-panel, .review-toggle-icon { transition: none; }
+        }
+
+        .review-form {
           padding: 1.5rem;
           background: var(--surface, #fff);
           border: 1px solid var(--border, #e2e2de);
@@ -174,6 +242,6 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
         .form-submit:hover:not(:disabled) { opacity: 0.85; }
         .form-submit:disabled { opacity: 0.4; cursor: not-allowed; }
       `}</style>
-    </form>
+    </div>
   );
 }
