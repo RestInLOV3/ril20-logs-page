@@ -156,7 +156,16 @@ const color = scenario.color as string;
                   </span>
                   <span class="log-title">{log.title}</span>
                   <span class="log-arrow" aria-hidden="true">
-                    ▸
+                    <svg viewBox="0 0 8 14" width="6" height="10.5">
+                      <path
+                        d="M1 1l6 6-6 6"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
                   </span>
                 </a>
               </li>
@@ -400,53 +409,40 @@ const color = scenario.color as string;
     }
   }
 
-  /* 로그 목록: 모서리를 깎은 게임 메뉴 스타일 */
+  /* 로그 목록: iOS 그룹 목록 스타일 (한 덩어리 + 들여쓴 구분선, 항목 수만큼 높이 증가) */
   .log-list {
     list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
     padding: 0;
+    background: var(--surface);
+    border-radius: 12px;
+    overflow: hidden;
   }
   .log-item a {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.8rem 1.1rem;
+    gap: 0.9rem;
+    min-height: 36px;
+    padding: 0.7rem 1rem;
     color: var(--text);
-    background: var(--surface);
-    clip-path: polygon(
-      var(--chamfer) 0,
-      100% 0,
-      100% calc(100% - var(--chamfer)),
-      calc(100% - var(--chamfer)) 100%,
-      0 100%,
-      0 var(--chamfer)
-    );
-    transition:
-      background 0.2s,
-      color 0.2s,
-      padding-left 0.25s ease;
+    text-decoration: none;
+    transition: background 0.15s;
   }
-  .log-item a::before {
+  /* 구분선: 번호 다음(제목 시작점)부터 오른쪽 끝까지 */
+  .log-item + .log-item a::before {
     content: "";
     position: absolute;
-    left: 0;
     top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--c);
-    transform: scaleY(0.35);
-    transition: transform 0.25s ease;
+    left: calc(1rem + 1.5rem + 0.9rem);
+    right: 0;
+    border-top: 1px solid rgba(60, 60, 67, 0.13);
   }
   .log-item a:hover {
     opacity: 1;
-    padding-left: 1.5rem;
-    background: color-mix(in srgb, var(--c) 10%, var(--surface));
+    background: color-mix(in srgb, var(--c) 7%, var(--surface));
   }
-  .log-item a:hover::before {
-    transform: scaleY(1);
+  .log-item a:active {
+    background: color-mix(in srgb, var(--c) 14%, var(--surface));
   }
   .log-num {
     font-size: 0.78rem;
@@ -460,17 +456,15 @@ const color = scenario.color as string;
     font-size: 0.92rem;
   }
   .log-arrow {
-    font-size: 0.8rem;
-    color: var(--c);
-    opacity: 0;
-    transform: translateX(-6px);
+    display: flex;
+    color: rgba(60, 60, 67, 0.3);
     transition:
-      opacity 0.2s,
-      transform 0.25s ease;
+      color 0.15s,
+      transform 0.2s ease;
   }
   .log-item a:hover .log-arrow {
-    opacity: 1;
-    transform: none;
+    color: var(--c);
+    transform: translateX(2px);
   }
 
   /* 후기 사이드탭: 데스크톱에서는 스크롤을 따라오는 패널 */
