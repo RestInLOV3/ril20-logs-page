@@ -51,42 +51,43 @@ const color = scenario.color as string;
 
   <article class="log-body" set:html={html} />
 
-  <nav class="log-nav" style={`--c: ${color}`}>
-    <div class="nav-item nav-prev">
+  <nav class="log-nav" style={`--c: ${color}`} aria-label="로그 이동">
+    {/* 첫 로그엔 '이전', 마지막 로그엔 '다음' 카드를 표시하지 않음 */}
+    <div class="nav-cards">
       {
-        prev ? (
-          <a href={`/logs/${slug}/${prev.id}`}>
-            <span class="nav-label">← 이전</span>
-            <span class="nav-log-title">{prev.title}</span>
+        prev && (
+          <a href={`/logs/${slug}/${prev.id}`} class="nav-card nav-prev">
+            <svg class="nav-chevron" viewBox="0 0 8 14" width="8" height="14" aria-hidden="true">
+              <path d="M7 1L1 7l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <span class="nav-text">
+              <span class="nav-label">이전 로그</span>
+              <span class="nav-log-title">{prev.title}</span>
+            </span>
           </a>
-        ) : (
-          <span class="nav-disabled">← 처음 로그</span>
         )
       }
-    </div>
-
-    <a href={`/logs/${slug}`} class="nav-back">목록으로</a>
-
-    <div class="nav-item nav-next">
       {
-        next ? (
-          <a href={`/logs/${slug}/${next.id}`}>
-            <span class="nav-label">다음 →</span>
-            <span class="nav-log-title">{next.title}</span>
+        next && (
+          <a href={`/logs/${slug}/${next.id}`} class="nav-card nav-next">
+            <span class="nav-text">
+              <span class="nav-label">다음 로그</span>
+              <span class="nav-log-title">{next.title}</span>
+            </span>
+            <svg class="nav-chevron" viewBox="0 0 8 14" width="8" height="14" aria-hidden="true">
+              <path d="M1 1l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
           </a>
-        ) : (
-          <span class="nav-disabled">마지막 로그 →</span>
         )
       }
+      <a href={`/logs/${slug}`} class="nav-back">목록으로</a>
     </div>
   </nav>
 </LogsLayout>
 
 <style>
   .log-header {
-    margin-bottom: 2.5rem;
     padding-bottom: 1.25rem;
-    border-bottom: 2px solid var(--c);
   }
   .breadcrumb {
     font-size: 0.8rem;
@@ -132,70 +133,108 @@ const color = scenario.color as string;
     margin: 1.5em 0;
   }
 
+  /* 로그 이동: 시나리오 페이지의 iOS 목록과 같은 톤의 카드 */
   .log-nav {
+    margin-top: 3rem;
+  }
+  /* [이전] [목록으로] [다음] 한 줄. 없는 카드 자리는 비워 둠 */
+  .nav-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .nav-prev {
+    grid-column: 1;
+  }
+  .nav-card {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1.25rem 1.5rem;
+    gap: 0.9rem;
+    min-width: 0;
+    padding: 0.85rem 1.1rem;
     background: var(--surface);
-  }
-  .log-nav a {
+    border-radius: 12px;
+    color: var(--text);
     text-decoration: none;
+    transition: background 0.15s;
   }
-  .nav-item {
-    flex: 1;
+  .nav-card:hover {
+    opacity: 1;
+    background: color-mix(in srgb, var(--c) 7%, var(--surface));
   }
-  .nav-item a {
+  .nav-card:active {
+    background: color-mix(in srgb, var(--c) 14%, var(--surface));
+  }
+  .nav-next {
+    grid-column: 3;
+    justify-content: flex-end;
+    text-align: right;
+  }
+  .nav-text {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    text-decoration: none;
-    color: var(--text);
-  }
-  .nav-prev a {
-    align-items: flex-start;
-  }
-  .nav-next a {
-    align-items: flex-end;
+    gap: 0.1rem;
+    min-width: 0;
   }
   .nav-label {
-    font-size: 0.73rem;
+    font-size: 0.72rem;
     color: var(--muted);
   }
   .nav-log-title {
-    font-size: 0.88rem;
+    font-size: 0.92rem;
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .nav-disabled {
-    font-size: 0.83rem;
-    color: var(--muted);
+  .nav-chevron {
+    flex-shrink: 0;
+    color: rgba(60, 60, 67, 0.3);
+    transition:
+      color 0.15s,
+      transform 0.2s ease;
+  }
+  .nav-prev:hover .nav-chevron {
+    color: var(--c);
+    transform: translateX(-2px);
+  }
+  .nav-next:hover .nav-chevron {
+    color: var(--c);
+    transform: translateX(2px);
   }
   .nav-back {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 0.45rem 1.2rem;
+    border-radius: 999px;
+    background: var(--surface);
     font-size: 0.83rem;
     color: var(--muted);
-    padding: 0.4rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: 4px;
+    text-decoration: none;
     white-space: nowrap;
+    transition:
+      color 0.15s,
+      background 0.15s;
   }
   .nav-back:hover {
-    border-color: var(--c);
-    color: var(--c);
     opacity: 1;
+    color: var(--c);
+    background: color-mix(in srgb, var(--c) 7%, var(--surface));
   }
   @media (max-width: 600px) {
-    .log-nav {
-      flex-direction: column;
-      align-items: stretch;
-      padding: 1rem;
-      gap: 0.75rem;
+    /* 모바일: 이전 · 다음 카드를 쌓고 목록으로는 맨 아래 가운데 */
+    .nav-cards {
+      grid-template-columns: minmax(0, 1fr);
     }
-    .nav-next a {
-      align-items: flex-start;
+    .nav-prev,
+    .nav-next {
+      grid-column: 1;
     }
     .nav-back {
-      text-align: center;
+      grid-column: 1;
+      grid-row: auto;
+      justify-self: center;
     }
   }
 </style>
