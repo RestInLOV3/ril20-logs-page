@@ -3,11 +3,14 @@ interface Props {
   title?: string;
   description?: string;
   image?: string | null;
+  /** 본문 폭을 넓힘 (2단 레이아웃 페이지용) */
+  wide?: boolean;
 }
 const {
   title = "ril20 logs",
   description = "RIL20 로그 아카이브",
   image,
+  wide = false,
 } = Astro.props;
 ---
 
@@ -74,6 +77,10 @@ const {
         max-width: 700px;
         margin: 0 auto;
         padding: 0 1.5rem;
+      }
+      .container.wide {
+        max-width: 1200px;
+        padding: 0 clamp(1.5rem, 4vw, 3rem);
       }
       header {
         padding: 1.25rem 0;
@@ -145,7 +152,7 @@ const {
         </nav>
       </div>
     </header>
-    <main class="container">
+    <main class:list={["container", { wide }]}>
       <slot />
     </main>
     <footer>

@@ -2,6 +2,7 @@
 import LogsLayout from "../layouts/LogsLayout.astro";
 import { bindings } from "../lib/bindings";
 import { r2KeyToUrl } from "../lib/r2";
+import { toKstDate } from "../lib/date";
 
 const { DB, R2_PUBLIC_URL } = bindings;
 
@@ -219,7 +220,7 @@ for (const c of characters) {
               {r.pl_name ?? "익명"}
             </span>
             <span class="review-content">{r.content}</span>
-            <time class="review-time">{r.created_at.slice(0, 10)}</time>
+            <time class="review-time">{toKstDate(r.created_at)}</time>
           </li>
         ))
       }

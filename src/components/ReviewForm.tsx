@@ -1,11 +1,18 @@
 import { useState } from "react";
+import type { Review } from "../lib/types";
 
 interface Props {
   readonly scenarioSlug: string;
   readonly accentColor: string;
+  /** 등록 성공 시 서버가 돌려준 후기 */
+  readonly onSubmitted?: (review: Review) => void;
 }
 
-export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
+export default function ReviewForm({
+  scenarioSlug,
+  accentColor,
+  onSubmitted,
+}: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [plName, setPlName] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -35,6 +42,7 @@ export default function ReviewForm({ scenarioSlug, accentColor }: Props) {
         throw new Error(data.message ?? "오류가 발생했습니다.");
       }
 
+      onSubmitted?.((await res.json()) as Review);
       setStatus("done");
       setContent("");
       setPlName("");
