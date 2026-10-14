@@ -483,11 +483,14 @@ const color = scenario.color as string;
     max-height: calc(100vh - 3rem);
     background: var(--panel-bg);
     clip-path: polygon(
-      0 0,
-      100% 0,
+      var(--chamfer) 0,
+      calc(100% - var(--chamfer)) 0,
+      100% var(--chamfer),
       100% calc(100% - var(--chamfer)),
       calc(100% - var(--chamfer)) 100%,
-      0 100%
+      var(--chamfer) 100%,
+      0 calc(100% - var(--chamfer)),
+      0 var(--chamfer)
     );
   }
   @media (max-width: 860px) {

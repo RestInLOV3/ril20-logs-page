@@ -119,6 +119,12 @@ export default function ReviewChat({
           overflow-y: auto;
           min-height: 0;
         }
+        /* 스크롤바: LogsLayout의 페이지 스크롤바와 동일
+           (레이아웃 스타일은 Astro 스코프라 React 요소에 적용되지 않아 여기서 다시 지정) */
+        .review-feed::-webkit-scrollbar { width: 8px; height: 8px; }
+        .review-feed::-webkit-scrollbar-thumb { background: var(--border, #e2e2de); border-radius: 4px; }
+        .review-feed::-webkit-scrollbar-thumb:hover { background: var(--muted, #8a8a86); }
+        .review-feed::-webkit-scrollbar-track { background: transparent; }
         .review-date {
           margin: 0.9rem 0 0.4rem;
           text-align: center;
@@ -144,6 +150,7 @@ export default function ReviewChat({
           position: relative;
           max-width: 85%;
           padding: 7px 12px;
+          margin: 0.1rem 0;
           border-radius: 18px;
           background: var(--bubble);
           color: #000;
