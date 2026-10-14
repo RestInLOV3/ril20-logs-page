@@ -7,6 +7,14 @@ function requireAdmin(env: Env, authHeader: string | undefined): boolean {
   return authHeader.replace('Bearer ', '') === env.ADMIN_TOKEN;
 }
 
+// 로그 페이지 URL이 /logs/:slug/:order_num 이므로 시나리오 안에서 순서 번호는 유일해야 함
+async function isOrderTaken(env: Env, scenarioId: number, orderNum: number, exceptLogId?: number) {
+  const row = await env.DB.prepare(
+    'SELECT id FROM logs WHERE scenario_id = ? AND order_num = ? AND id != ?',
+  ).bind(scenarioId, orderNum, exceptLogId ?? -1).first();
+  return row !== null;
+}
+
 const app = new Hono<{ Bindings: Env }>().basePath('/logs/api');
 
 // ── 공개 API ──────────────────────────────────────────
@@ -172,6 +180,7 @@ app.post('/admin/scenarios', async (c) => {
   const body = await c.req.json<{
     slug: string; title: string; color: string;
     description?: string | null; cover_r2?: string | null;
+    rule?: string | null; scenario_type?: string | null;
   }>();
 
   if (!body.slug || !body.title || !body.color) {
@@ -179,8 +188,11 @@ app.post('/admin/scenarios', async (c) => {
   }
 
   const { meta } = await c.env.DB.prepare(
-    'INSERT INTO scenarios (slug, title, description, color, cover_r2) VALUES (?, ?, ?, ?, ?)',
-  ).bind(body.slug, body.title, body.description ?? null, body.color, body.cover_r2 ?? null).run();
+    'INSERT INTO scenarios (slug, title, description, color, cover_r2, rule, scenario_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  ).bind(
+    body.slug, body.title, body.description ?? null, body.color, body.cover_r2 ?? null,
+    body.rule ?? null, body.scenario_type ?? null,
+  ).run();
 
   const scenario = await c.env.DB.prepare('SELECT * FROM scenarios WHERE id = ?')
     .bind(meta.last_row_id).first();
@@ -337,6 +349,9 @@ app.post('/admin/scenarios/:id/logs', async (c) => {
   if (!title || isNaN(orderNum) || !file) {
     return c.json({ error: 'bad_request', message: 'title, order_num, file은 필수입니다.' }, 400);
   }
+  if (await isOrderTaken(c.env, scenarioId, orderNum)) {
+    return c.json({ error: 'conflict', message: `순서 번호 ${orderNum}은(는) 이미 사용 중입니다.` }, 409);
+  }
 
   const { meta } = await c.env.DB.prepare(
     'INSERT INTO logs (scenario_id, title, order_num, html_r2) VALUES (?, ?, ?, ?)',
@@ -348,6 +363,41 @@ app.post('/admin/scenarios/:id/logs', async (c) => {
   await c.env.DB.prepare('UPDATE logs SET html_r2 = ? WHERE id = ?').bind(r2Key, logId).run();
 
   return c.json({ id: logId, title, order_num: orderNum, html_r2: r2Key }, 201);
+});
+
+app.put('/admin/logs/:id', async (c) => {
+  if (!requireAdmin(c.env, c.req.header('Authorization'))) {
+    return c.json({ error: 'unauthorized', message: '인증이 필요합니다.' }, 401);
+  }
+
+  const id = parseInt(c.req.param('id'));
+  const log = await c.env.DB.prepare('SELECT scenario_id, html_r2 FROM logs WHERE id = ?')
+    .bind(id).first<{ scenario_id: number; html_r2: string }>();
+  if (!log) return c.json({ error: 'not_found', message: '로그를 찾을 수 없습니다.' }, 404);
+
+  const form = await c.req.formData();
+  const title = (form.get('title') as string | null) || null;
+  const orderNumStr = form.get('order_num') as string | null;
+  const file = form.get('file') as File | null;
+
+  const orderNum = orderNumStr ? parseInt(orderNumStr) : null;
+  if (orderNum !== null && await isOrderTaken(c.env, log.scenario_id, orderNum, id)) {
+    return c.json({ error: 'conflict', message: `순서 번호 ${orderNum}은(는) 이미 사용 중입니다.` }, 409);
+  }
+
+  // 파일을 새로 고르면 같은 R2 키에 덮어씀 (URL·키는 그대로)
+  if (file && file.size > 0) {
+    await uploadToR2(c.env.BUCKET, log.html_r2, await file.arrayBuffer(), 'text/html; charset=utf-8');
+  }
+
+  await c.env.DB.prepare(`
+    UPDATE logs SET
+      title = COALESCE(?, title),
+      order_num = COALESCE(?, order_num)
+    WHERE id = ?
+  `).bind(title, orderNum, id).run();
+
+  return c.json({ ok: true });
 });
 
 app.delete('/admin/logs/:id', async (c) => {

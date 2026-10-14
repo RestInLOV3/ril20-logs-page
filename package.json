@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node -e \"const fs=require('fs');const c=JSON.parse(fs.readFileSync('dist/server/wrangler.json','utf8'));c.assets.directory='../client';c.d1_databases=c.d1_databases.map(d=>({...d,migrations_dir:'../../migrations'}));fs.writeFileSync('dist/server/wrangler.json',JSON.stringify(c,null,2));fs.mkdirSync('dist/server/.vite',{recursive:true})\"",
-    "watch": "nodemon --watch src --watch functions --ext astro,ts,tsx,css,js,mjs --exec \"npm run build\" --delay 1",
+    "watch": "nodemon --watch src --ext astro,ts,tsx,css,js,mjs --exec \"npm run build\" --delay 1",
     "wrangler:dev": "wrangler dev --config dist/server/wrangler.json --persist-to .wrangler",
     "migrate:local": "wrangler d1 migrations apply foundry-db --local --persist-to .wrangler",
     "migrate": "wrangler d1 migrations apply foundry-db",

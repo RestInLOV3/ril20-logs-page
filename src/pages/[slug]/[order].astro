@@ -3,7 +3,8 @@ import LogsLayout from "../../layouts/LogsLayout.astro";
 import { bindings } from "../../lib/bindings";
 import { getFromR2 } from "../../lib/r2";
 
-const { slug, logId } = Astro.params as { slug: string; logId: string };
+// URL 숫자 = 시나리오 안의 순서 번호(order_num). 시나리오별로 중복 불가 (api.ts에서 검사)
+const { slug, order } = Astro.params as { slug: string; order: string };
 const { DB, BUCKET } = bindings;
 
 const scenario = await DB.prepare("SELECT * FROM scenarios WHERE slug = ?")
@@ -13,9 +14,9 @@ const scenario = await DB.prepare("SELECT * FROM scenarios WHERE slug = ?")
 if (!scenario) return Astro.redirect("/logs");
 
 const log = await DB.prepare(
-  "SELECT * FROM logs WHERE id = ? AND scenario_id = ?",
+  "SELECT * FROM logs WHERE order_num = ? AND scenario_id = ?",
 )
-  .bind(parseInt(logId), scenario.id)
+  .bind(parseInt(order), scenario.id)
   .first<Record<string, unknown>>();
 
 if (!log) return Astro.redirect(`/logs/${slug}`);
@@ -56,7 +57,7 @@ const color = scenario.color as string;
     <div class="nav-cards">
       {
         prev && (
-          <a href={`/logs/${slug}/${prev.id}`} class="nav-card nav-prev">
+          <a href={`/logs/${slug}/${prev.order_num}`} class="nav-card nav-prev">
             <svg class="nav-chevron" viewBox="0 0 8 14" width="8" height="14" aria-hidden="true">
               <path d="M7 1L1 7l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
@@ -69,7 +70,7 @@ const color = scenario.color as string;
       }
       {
         next && (
-          <a href={`/logs/${slug}/${next.id}`} class="nav-card nav-next">
+          <a href={`/logs/${slug}/${next.order_num}`} class="nav-card nav-next">
             <span class="nav-text">
               <span class="nav-label">다음 로그</span>
               <span class="nav-log-title">{next.title}</span>

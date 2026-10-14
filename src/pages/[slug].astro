@@ -150,7 +150,7 @@ const color = scenario.color as string;
           {
             logs.map((log) => (
               <li class="log-item">
-                <a href={`/logs/${slug}/${log.id}`}>
+                <a href={`/logs/${slug}/${log.order_num}`}>
                   <span class="log-num">
                     {String(log.order_num).padStart(2, "0")}
                   </span>
